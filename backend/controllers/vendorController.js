@@ -1,130 +1,85 @@
 const Vendor = require('../models/Vendor');
-const Product = require('../models/Product');
+const SubscriptionPlan = require('../models/SubscriptionPlan');
 
-// @desc    Get public vendor storefront with all listed products
-// @route   GET /api/vendors/store/:slug
+// @desc    Get all active vendors
+// @route   GET /api/vendors
 // @access  Public
-exports.getStoreBySlug = async (req, res, next) => {
+exports.getVendors = async (req, res) => {
   try {
-    const vendor = await Vendor.findOne({ storeSlug: req.params.slug, isActive: true })
-      .select('-bankAccount -stripeAccountId');
+    const vendors = await Vendor.find({ isVerified: true })
+      .populate('user', 'name avatar')
+      .populate('subscriptionPlan');
 
-    if (!vendor) {
-      return res.status(404).json({
-        success: false,
-        message: 'Store not found',
-      });
-    }
-
-    const products = await Product.find({ vendor: vendor._id, isActive: true, isApproved: true })
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      vendor,
-      products,
+      count: vendors.length,
+      vendors,
     });
   } catch (err) {
-    next(err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Get authenticated vendor's dashboard metrics
-// @route   GET /api/vendors/my-store
-// @access  Private (Vendor only)
-exports.getMyStore = async (req, res, next) => {
+// @desc    Get vendor store by slug
+// @route   GET /api/vendors/:slug
+// @access  Public
+exports.getVendorBySlug = async (req, res) => {
   try {
-    const vendor = await Vendor.findOne({ user: req.user._id })
+    const vendor = await Vendor.findOne({ storeSlug: req.params.slug })
+      .populate('user', 'name avatar')
       .populate('subscriptionPlan');
 
     if (!vendor) {
-      return res.status(404).json({
-        success: false,
-        message: 'Vendor store profile not found',
-      });
+      return res.status(404).json({ success: false, message: 'Vendor store not found' });
     }
 
-    const productCount = await Product.countDocuments({ vendor: vendor._id });
-
-    res.status(200).json({
-      success: true,
-      vendor,
-      stats: {
-        totalProducts: productCount,
-        availableBalance: vendor.wallet.availableBalance,
-        pendingBalance: vendor.wallet.pendingBalance,
-        totalEarnings: vendor.wallet.totalEarnings,
-      },
-    });
+    return res.status(200).json({ success: true, vendor });
   } catch (err) {
-    next(err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Update store branding & bank details
-// @route   PUT /api/vendors/my-store
-// @access  Private (Vendor only)
-exports.updateMyStore = async (req, res, next) => {
+// @desc    Get all available SaaS Subscription Plans
+// @route   GET /api/vendors/plans
+// @access  Public
+exports.getSubscriptionPlans = async (req, res) => {
   try {
-    const { storeName, description, logo, banner, bankAccount } = req.body;
-
-    const vendor = await Vendor.findOne({ user: req.user._id });
-    if (!vendor) {
-      return res.status(404).json({
-        success: false,
-        message: 'Vendor profile not found',
-      });
-    }
-
-    if (storeName) vendor.storeName = storeName;
-    if (description) vendor.description = description;
-    if (logo) vendor.logo = logo;
-    if (banner) vendor.banner = banner;
-    if (bankAccount) vendor.bankAccount = { ...vendor.bankAccount, ...bankAccount };
-
-    await vendor.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Store settings updated successfully',
-      vendor,
-    });
+    const plans = await SubscriptionPlan.find({ isActive: true });
+    return res.status(200).json({ success: true, plans });
   } catch (err) {
-    next(err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Submit KYC documents for admin review
-// @route   POST /api/vendors/kyc
-// @access  Private (Vendor only)
-exports.submitKyc = async (req, res, next) => {
+// @desc    Upgrade Vendor SaaS Subscription Tier
+// @route   POST /api/vendors/upgrade-plan
+// @access  Private (Vendor)
+exports.upgradePlan = async (req, res) => {
   try {
-    const { businessRegistrationNumber, taxId, documentUrl } = req.body;
+    const { planSlug } = req.body;
+    const vendor = await Vendor.findOne({ user: req.user.id });
 
-    const vendor = await Vendor.findOne({ user: req.user._id });
     if (!vendor) {
-      return res.status(404).json({
-        success: false,
-        message: 'Vendor profile not found',
-      });
+      return res.status(404).json({ success: false, message: 'Vendor profile not found' });
     }
 
-    vendor.kyc = {
-      businessRegistrationNumber,
-      taxId,
-      documentUrl,
-      status: 'pending',
-      rejectionReason: '',
-    };
+    const plan = await SubscriptionPlan.findOne({ slug: planSlug });
+    if (!plan) {
+      return res.status(404).json({ success: false, message: 'Subscription plan not found' });
+    }
 
+    vendor.subscriptionPlan = plan._id;
+    vendor.commissionRate = plan.commissionRate;
+    vendor.subscriptionStatus = 'active';
     await vendor.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: 'KYC documents submitted successfully. Admin review pending.',
-      kyc: vendor.kyc,
+      message: `Successfully upgraded to ${plan.name} Plan! Commission lowered to ${plan.commissionRate}%.`,
+      vendor,
+      plan,
     });
   } catch (err) {
-    next(err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };

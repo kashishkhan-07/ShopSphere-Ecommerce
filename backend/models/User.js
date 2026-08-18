@@ -15,16 +15,12 @@ const UserSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      match: [
-        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-        'Please enter a valid email address',
-      ],
     },
     password: {
       type: String,
       required: [true, 'Please enter a password'],
       minlength: [6, 'Password must be at least 6 characters long'],
-      select: false, // Don't return password in query results
+      select: false,
     },
     role: {
       type: String,
@@ -63,26 +59,25 @@ const UserSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Encrypt password using bcrypt before saving to MongoDB
-UserSchema.pre('save', async function (next) {
+// Mongoose 8 async pre-save hook (without next)
+UserSchema.pre('save', async function () {
   if (!this.isModified('password')) {
-    return next();
+    return;
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
-// Compare entered password with hashed password in database
+// Compare password
 UserSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Generate signed JWT Token
+// Sign JWT Token
 UserSchema.methods.getSignedJwtToken = function () {
   return jwt.sign(
     { id: this._id, role: this.role, email: this.email },
-    process.env.JWT_SECRET || 'shopsphere_fallback_secret_key',
+    process.env.JWT_SECRET || 'shopsphere_super_jwt_secret_dev_key_2026_secure',
     {
       expiresIn: process.env.JWT_EXPIRE || '30d',
     }

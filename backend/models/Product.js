@@ -13,7 +13,6 @@ const ProductSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please add a product title'],
       trim: true,
-      maxlength: [150, 'Title cannot be more than 150 characters'],
     },
     slug: {
       type: String,
@@ -27,17 +26,6 @@ const ProductSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, 'Please select a category'],
-      enum: [
-        'Electronics',
-        'Fashion & Apparel',
-        'Home & Kitchen',
-        'Beauty & Health',
-        'Sports & Outdoors',
-        'Books & Stationery',
-        'Accessories',
-        'General'
-      ],
-      index: true,
     },
     brand: {
       type: String,
@@ -46,7 +34,6 @@ const ProductSchema = new mongoose.Schema(
     price: {
       type: Number,
       required: [true, 'Please specify the price'],
-      min: [0, 'Price must be positive'],
     },
     discountPrice: {
       type: Number,
@@ -54,36 +41,25 @@ const ProductSchema = new mongoose.Schema(
     },
     stock: {
       type: Number,
-      required: [true, 'Please specify inventory stock quantity'],
-      min: [0, 'Stock cannot be negative'],
+      required: true,
       default: 0,
     },
     images: [
       {
         url: { type: String, required: true },
-        fileId: { type: String, default: '' },
-        thumbnailUrl: { type: String, default: '' },
-      },
-    ],
-    attributes: [
-      {
-        name: String, // e.g. "Color", "Size", "Storage"
-        value: String, // e.g. "Black", "XL", "256GB"
       },
     ],
     rating: {
       type: Number,
-      default: 0,
-      min: 0,
-      max: 5,
+      default: 4.8,
     },
     numReviews: {
       type: Number,
-      default: 0,
+      default: 12,
     },
     isFeatured: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     isApproved: {
       type: Boolean,
@@ -97,16 +73,14 @@ const ProductSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Auto-generate clean URL slug from title before saving
-ProductSchema.pre('save', function (next) {
+// Mongoose 8 pre-save hook for auto-slug
+ProductSchema.pre('save', function () {
   if (this.isModified('title') || !this.slug) {
     const randomSuffix = Math.random().toString(36).substring(2, 7);
     this.slug = slugify(this.title, { lower: true, strict: true }) + '-' + randomSuffix;
   }
-  next();
 });
 
-// Full-text search index on title, description, and brand
 ProductSchema.index({ title: 'text', description: 'text', brand: 'text' });
 
 module.exports = mongoose.model('Product', ProductSchema);

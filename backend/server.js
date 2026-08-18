@@ -17,6 +17,7 @@ const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const vendorRoutes = require('./routes/vendorRoutes');
 const mediaRoutes = require('./routes/mediaRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 
 // Connect to MongoDB
 connectDB();
@@ -95,6 +96,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Centralized Error Handler
 app.use(errorHandler);
