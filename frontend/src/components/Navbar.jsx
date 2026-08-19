@@ -51,7 +51,7 @@ export default function Navbar({
     <>
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 font-['Plus_Jakarta_Sans',sans-serif] w-full">
 
-        {/* ⚡ Top Persona Switcher Bar (Exact Image 3 Style) */}
+        {/* ⚡ Top Persona Switcher Bar */}
         <div className="bg-slate-900 text-white text-[11px] px-4 py-1.5 flex items-center justify-between overflow-x-auto [scrollbar-width:none]">
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider flex items-center gap-1">
@@ -99,7 +99,7 @@ export default function Navbar({
         {/* Main Navbar */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
 
-          {/* 🌟 Exact Original 3D Glowing Cube Logo (From Image 3) 🌟 */}
+          {/* 🌟 Exact Match Logo from Your Screenshot 🌟 */}
           <button
             onClick={() => {
               setActiveTab('catalog');
@@ -107,27 +107,36 @@ export default function Navbar({
             }}
             className="flex items-center gap-3 text-left group cursor-pointer shrink-0"
           >
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/30 group-hover:scale-105 transition-transform duration-300">
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m7.5 4.27 9 5.15" />
-                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-                <path d="m3.3 7 8.7 5 8.7-5" />
-                <path d="M12 22V12" />
+            {/* Glowing Gradient Squircle Orbit Icon */}
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-violet-500 flex items-center justify-center shadow-md shadow-indigo-500/25 group-hover:scale-105 transition-transform duration-300 shrink-0">
+              <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="2.5" fill="#38bdf8" stroke="#38bdf8" />
+                <path d="M12 2a10 10 0 1 0 10 10" stroke="url(#swirlGrad)" strokeWidth="2.2" />
+                <path d="M12 6a6 6 0 1 0 6 6" stroke="#ffffff" strokeWidth="1.8" />
+                <defs>
+                  <linearGradient id="swirlGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#38bdf8" />
+                    <stop offset="100%" stopColor="#e879f9" />
+                  </linearGradient>
+                </defs>
               </svg>
             </div>
+
+            {/* Typography with Cyan Dot */}
             <div>
-              <span className="font-black text-lg tracking-tight text-slate-900 flex items-center">
-                ShopSphere<span className="text-indigo-600">.</span>
+              <span className="font-extrabold text-xl tracking-tight text-slate-900 flex items-center leading-none">
+                Shop<span className="text-indigo-600">Sphere</span>
+                <span className="w-2 h-2 rounded-full bg-cyan-400 ml-0.5 inline-block shadow-xs shadow-cyan-300"></span>
               </span>
-              <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block -mt-1">
-                Marketplace Cloud
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block mt-0.5">
+                MARKETPLACE CLOUD
               </span>
             </div>
           </button>
 
-          {/* Search Bar */}
+          {/* Search Bar Pill */}
           <div className="flex-1 max-w-md hidden md:block relative">
-            <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
+            <Search size={16} className="absolute left-4 top-3 text-slate-400" />
             <input
               type="text"
               placeholder="Search products across all stores..."
@@ -136,7 +145,7 @@ export default function Navbar({
                 setSearchQuery(e.target.value);
                 if (activeTab !== 'catalog') setActiveTab('catalog');
               }}
-              className="w-full text-xs bg-slate-100 focus:bg-white border border-transparent focus:border-indigo-500 rounded-2xl pl-10 pr-4 py-2.5 focus:outline-none transition"
+              className="w-full text-xs bg-slate-100/80 focus:bg-white border border-transparent focus:border-indigo-500 rounded-full pl-10 pr-4 py-2.5 focus:outline-none transition shadow-2xs"
             />
           </div>
 
@@ -144,14 +153,14 @@ export default function Navbar({
           <div className="hidden md:flex items-center gap-3 shrink-0">
             <button
               onClick={() => setActiveTab('catalog')}
-              className={`text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer ${
+              className={`text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer ${
                 activeTab === 'catalog' ? 'bg-slate-100 text-indigo-600' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Marketplace
             </button>
 
-            {/* Buyer My Orders */}
+            {/* Customer Orders */}
             {isAuthenticated && !isVendor && !isAdmin && (
               <button
                 onClick={() => setActiveTab('orders')}
@@ -167,7 +176,7 @@ export default function Navbar({
             {isVendor && (
               <button
                 onClick={() => setActiveTab('vendor-portal')}
-                className={`text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer ${
+                className={`text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer ${
                   activeTab === 'vendor-portal' ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
@@ -175,7 +184,7 @@ export default function Navbar({
               </button>
             )}
 
-            {/* 👑 Super Admin Dashboard Button */}
+            {/* 👑 Super Admin Desk */}
             {isAdmin && (
               <button
                 onClick={() => setActiveTab('admin-portal')}
@@ -201,26 +210,29 @@ export default function Navbar({
               </button>
             )}
 
-            {/* 🛒 Shopping Cart (Only for Buyers) */}
+            {/* 🛒 Shopping Cart (With Purple Count Badge from Screenshot) */}
             {!isVendor && !isAdmin && (
               <button
                 onClick={() => setActiveTab('cart')}
                 className="relative p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                title="View Shopping Cart"
               >
                 <ShoppingBag size={20} />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
                     {cartCount}
                   </span>
                 )}
               </button>
             )}
 
+            {/* User Profile / Sign In */}
             {isAuthenticated ? (
               <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
                 <button
                   onClick={() => setShowProfileModal(true)}
                   className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 p-1.5 px-2.5 rounded-2xl transition cursor-pointer"
+                  title="Edit Profile"
                 >
                   <img
                     src={user.avatar || getAvatar(user.name)}
@@ -243,7 +255,7 @@ export default function Navbar({
             ) : (
               <button
                 onClick={() => openAuthModal('login')}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-indigo-200 transition cursor-pointer"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md shadow-indigo-200 transition cursor-pointer"
               >
                 Sign In
               </button>
@@ -269,7 +281,7 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* Mobile Dropdown */}
+        {/* Mobile Drawer */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-white border-b border-slate-200 px-4 py-4 space-y-3">
             <div className="grid grid-cols-2 gap-2">
