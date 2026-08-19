@@ -272,3 +272,92 @@ exports.demoLogin = async (req, res) => {
     });
   }
 };
+
+// @desc    Update user profile details (Name, Phone, Address)
+// @route   PUT /api/auth/update-profile
+// @access  Private
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, phone, street, city, state, postalCode } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (name) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+
+    if (street || city || state || postalCode) {
+      user.addresses = [
+        {
+          fullName: name || user.name,
+          street: street || user.addresses?.[0]?.street || '',
+          city: city || user.addresses?.[0]?.city || '',
+          state: state || user.addresses?.[0]?.state || '',
+          postalCode: postalCode || user.addresses?.[0]?.postalCode || '',
+          phone: phone || user.phone || '',
+          country: 'India',
+          isDefault: true,
+        },
+      ];
+    }
+
+    await user.save();
+
+    let vendor = null;
+    if (user.role === 'vendor') {
+      vendor = await Vendor.findOne({ user: user._id });
+    }
+
+    return sendTokenResponse(user, 200, res, { vendor, message: 'Profile updated successfully!' });
+  } catch (err) {
+    console.error('Update profile error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Update user profile details (Name, Avatar, Phone, Address)
+// @route   PUT /api/auth/update-profile
+// @access  Private
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, avatar, phone, street, city, state, postalCode } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (name) user.name = name;
+    if (avatar) user.avatar = avatar;
+    if (phone !== undefined) user.phone = phone;
+
+    if (street || city || state || postalCode) {
+      user.addresses = [
+        {
+          fullName: name || user.name,
+          street: street || user.addresses?.[0]?.street || '',
+          city: city || user.addresses?.[0]?.city || '',
+          state: state || user.addresses?.[0]?.state || '',
+          postalCode: postalCode || user.addresses?.[0]?.postalCode || '',
+          phone: phone || user.phone || '',
+          country: 'India',
+          isDefault: true,
+        },
+      ];
+    }
+
+    await user.save();
+
+    let vendor = null;
+    if (user.role === 'vendor') {
+      vendor = await Vendor.findOne({ user: user._id });
+    }
+
+    return sendTokenResponse(user, 200, res, { vendor, message: 'Profile updated successfully!' });
+  } catch (err) {
+    console.error('Update profile error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};

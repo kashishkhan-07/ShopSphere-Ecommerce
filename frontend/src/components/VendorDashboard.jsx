@@ -6,7 +6,6 @@ import {
   Plus,
   Package,
   DollarSign,
-  Store,
   Trash2,
   X,
   Truck,
@@ -31,7 +30,7 @@ export default function VendorDashboard() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: 'Electronics',
+    category: 'Beauty & Wellness',
     brand: '',
     price: '',
     discountPrice: '',
@@ -43,6 +42,26 @@ export default function VendorDashboard() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3000);
   };
+
+  // 🎨 Smart Category-based HD Fallback Image Selector
+  const getProductImage = (product) => {
+    const rawUrl = product.images?.[0]?.url;
+    if (rawUrl && rawUrl.startsWith('http') && !rawUrl.includes('shopspheredemo')) {
+      return rawUrl;
+    }
+    switch (product.category) {
+      case 'Beauty & Wellness':
+        return 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=300';
+      case 'Fashion & Apparel':
+        return 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=300';
+      case 'Home & Kitchen':
+        return 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=300';
+      default:
+        return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300';
+    }
+  };
+
+  const storeLogoFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(vendor?.storeName || 'Store')}&background=4f46e5&color=fff&bold=true&size=128`;
 
   useEffect(() => {
     fetchVendorData();
@@ -67,6 +86,24 @@ export default function VendorDashboard() {
   const handleAddProduct = async (e) => {
     e.preventDefault();
     try {
+      // Auto-assign HD category image if empty
+      let finalImg = formData.imageUrl;
+      if (!finalImg) {
+        switch (formData.category) {
+          case 'Beauty & Wellness':
+            finalImg = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=600';
+            break;
+          case 'Fashion & Apparel':
+            finalImg = 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=600';
+            break;
+          case 'Home & Kitchen':
+            finalImg = 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=600';
+            break;
+          default:
+            finalImg = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600';
+        }
+      }
+
       const payload = {
         title: formData.title,
         description: formData.description,
@@ -75,9 +112,7 @@ export default function VendorDashboard() {
         price: Number(formData.price),
         discountPrice: Number(formData.discountPrice) || 0,
         stock: Number(formData.stock),
-        images: [
-          { url: formData.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500' },
-        ],
+        images: [{ url: finalImg }],
       };
 
       await api.post('/products', payload);
@@ -85,7 +120,7 @@ export default function VendorDashboard() {
       setFormData({
         title: '',
         description: '',
-        category: 'Electronics',
+        category: 'Beauty & Wellness',
         brand: '',
         price: '',
         discountPrice: '',
@@ -93,7 +128,7 @@ export default function VendorDashboard() {
         imageUrl: '',
       });
       fetchVendorData();
-      showToast('Product published to marketplace successfully!');
+      showToast('Product published with HD image!');
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to create product');
     }
@@ -155,9 +190,10 @@ export default function VendorDashboard() {
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <img
-            src={vendor?.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(vendor?.storeName || 'Store')}&background=4f46e5&color=fff&bold=true`}
+            src={vendor?.logo && !vendor.logo.includes('shopspheredemo') ? vendor.logo : storeLogoFallback}
             alt={vendor?.storeName}
-            className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-sm"
+            onError={(e) => { e.target.src = storeLogoFallback; }}
+            className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-sm shrink-0"
           />
           <div>
             <div className="flex items-center gap-2">
@@ -268,35 +304,42 @@ export default function VendorDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {products.map((p) => (
-                  <tr key={p._id} className="hover:bg-slate-50/60 transition">
-                    <td className="p-4 flex items-center gap-3">
-                      <img
-                        src={p.images?.[0]?.url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100'}
-                        alt={p.title}
-                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
-                      />
-                      <span className="font-bold text-slate-800">{p.title}</span>
-                    </td>
-                    <td className="p-4 text-slate-600">{p.category}</td>
-                    <td className="p-4 font-bold text-slate-900">₹{(p.discountPrice || p.price).toLocaleString('en-IN')}</td>
-                    <td className="p-4">
-                      <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
-                        p.stock > 5 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
-                      }`}>
-                        {p.stock} units
-                      </span>
-                    </td>
-                    <td className="p-4 text-right">
-                      <button
-                        onClick={() => handleDeleteProduct(p._id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {products.map((p) => {
+                  const itemImg = getProductImage(p);
+                  return (
+                    <tr key={p._id} className="hover:bg-slate-50/60 transition">
+                      <td className="p-4 flex items-center gap-3">
+                        <img
+                          src={itemImg}
+                          alt={p.title}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=300';
+                          }}
+                          className="w-11 h-11 rounded-xl object-cover border border-slate-200 shrink-0 shadow-xs"
+                        />
+                        <span className="font-bold text-slate-800 text-xs">{p.title}</span>
+                      </td>
+                      <td className="p-4 text-slate-600 font-medium">{p.category}</td>
+                      <td className="p-4 font-bold text-slate-900">₹{(p.discountPrice || p.price).toLocaleString('en-IN')}</td>
+                      <td className="p-4">
+                        <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
+                          p.stock > 5 ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'
+                        }`}>
+                          {p.stock} units
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <button
+                          onClick={() => handleDeleteProduct(p._id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -357,7 +400,11 @@ export default function VendorDashboard() {
                   {order.items.map((item, i) => (
                     <div key={i} className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-3">
-                        <img src={item.image} alt={item.title} className="w-9 h-9 rounded-lg object-cover border border-slate-200" />
+                        <img
+                          src={item.image || 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=200'}
+                          alt={item.title}
+                          className="w-9 h-9 rounded-lg object-cover border border-slate-200"
+                        />
                         <span className="font-medium text-slate-700">{item.title} × {item.qty}</span>
                       </div>
                       <span className="font-bold text-slate-900">₹{(item.price * item.qty).toLocaleString('en-IN')}</span>
@@ -445,7 +492,7 @@ export default function VendorDashboard() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Wireless Headphones"
+                  placeholder="e.g. Organic Aloe Vera Facial Serum"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
@@ -458,19 +505,19 @@ export default function VendorDashboard() {
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none cursor-pointer"
                   >
+                    <option value="Beauty & Wellness">Beauty & Wellness</option>
                     <option value="Electronics">Electronics</option>
                     <option value="Fashion & Apparel">Fashion & Apparel</option>
                     <option value="Home & Kitchen">Home & Kitchen</option>
-                    <option value="Beauty & Wellness">Beauty & Wellness</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Brand</label>
                   <input
                     type="text"
-                    placeholder="e.g. Sony"
+                    placeholder="e.g. Aaina Care"
                     value={formData.brand}
                     onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                     className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
@@ -484,7 +531,7 @@ export default function VendorDashboard() {
                   <input
                     type="number"
                     required
-                    placeholder="3999"
+                    placeholder="2500"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
@@ -494,7 +541,7 @@ export default function VendorDashboard() {
                   <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Discount Price</label>
                   <input
                     type="number"
-                    placeholder="2999"
+                    placeholder="1999"
                     value={formData.discountPrice}
                     onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
                     className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
@@ -514,10 +561,10 @@ export default function VendorDashboard() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Image URL</label>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Image URL (Optional)</label>
                 <input
                   type="url"
-                  placeholder="https://images.unsplash.com/photo-..."
+                  placeholder="Leave empty for auto HD category image"
                   value={formData.imageUrl}
                   onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                   className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
@@ -529,7 +576,7 @@ export default function VendorDashboard() {
                 <textarea
                   rows={3}
                   required
-                  placeholder="Detailed product specifications..."
+                  placeholder="Detailed product ingredients and specifications..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"

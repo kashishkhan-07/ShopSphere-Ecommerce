@@ -1,249 +1,178 @@
 const Product = require('../models/Product');
 const Vendor = require('../models/Vendor');
-const SubscriptionPlan = require('../models/SubscriptionPlan');
 
-// @desc    Get all products (Search, category & price filters, sorting, pagination)
+// @desc    1. Get all active products with search, category & vendor filtering
 // @route   GET /api/products
 // @access  Public
-exports.getProducts = async (req, res, next) => {
+exports.getProducts = async (req, res) => {
   try {
-    const { keyword, category, minPrice, maxPrice, vendor, sort, page = 1, limit = 12 } = req.query;
-
     const query = { isActive: true, isApproved: true };
 
-    // Search by keyword
-    if (keyword) {
-      query.$text = { $search: keyword };
+    // Flexible Category Filter (Case-insensitive)
+    if (req.query.category && req.query.category !== 'All') {
+      query.category = { $regex: new RegExp(req.query.category.trim(), 'i') };
     }
 
-    // Filter by Category
-    if (category && category !== 'All') {
-      query.category = category;
+    // Vendor store filter
+    if (req.query.vendor) {
+      query.vendor = req.query.vendor;
     }
 
-    // Filter by Vendor
-    if (vendor) {
-      query.vendor = vendor;
+    // Text search
+    if (req.query.search) {
+      query.$or = [
+        { title: { $regex: req.query.search, $options: 'i' } },
+        { description: { $regex: req.query.search, $options: 'i' } },
+        { brand: { $regex: req.query.search, $options: 'i' } },
+      ];
     }
 
-    // Filter by Price range
-    if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) query.price.$gte = Number(minPrice);
-      if (maxPrice) query.price.$lte = Number(maxPrice);
-    }
-
-    // Sorting options
+    // Sorting
     let sortOption = { createdAt: -1 };
-    if (sort === 'price_asc') sortOption = { price: 1 };
-    if (sort === 'price_desc') sortOption = { price: -1 };
-    if (sort === 'rating') sortOption = { rating: -1 };
-
-    // Pagination calculation
-    const skip = (Number(page) - 1) * Number(limit);
-    const total = await Product.countDocuments(query);
+    if (req.query.sort === 'price-low') sortOption = { price: 1 };
+    if (req.query.sort === 'price-high') sortOption = { price: -1 };
+    if (req.query.sort === 'rating') sortOption = { rating: -1 };
 
     const products = await Product.find(query)
-      .populate('vendor', 'storeName storeSlug logo isVerified rating')
-      .sort(sortOption)
-      .skip(skip)
-      .limit(Number(limit));
+      .populate('vendor', 'storeName storeSlug logo isVerified')
+      .sort(sortOption);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: products.length,
-      total,
-      totalPages: Math.ceil(total / Number(limit)),
-      currentPage: Number(page),
       products,
     });
   } catch (err) {
-    next(err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Server error fetching products',
+    });
   }
 };
 
-// @desc    Get single product by slug
+// @desc    2. Get single product by slug or ID
 // @route   GET /api/products/:slug
 // @access  Public
-exports.getProductBySlug = async (req, res, next) => {
+exports.getProductBySlug = async (req, res) => {
   try {
-    const product = await Product.findOne({ slug: req.params.slug })
-      .populate('vendor', 'storeName storeSlug logo description rating numReviews isVerified');
+    const isId = req.params.slug.match(/^[0-9a-fA-F]{24}$/);
+    const query = isId ? { _id: req.params.slug } : { slug: req.params.slug };
+
+    const product = await Product.findOne(query).populate('vendor', 'storeName storeSlug logo isVerified rating');
 
     if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found',
-      });
+      return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    res.status(200).json({
-      success: true,
-      product,
-    });
+    return res.status(200).json({ success: true, product });
   } catch (err) {
-    next(err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Get products belonging to the logged-in vendor
+// @desc    3. Get Vendor's own products
 // @route   GET /api/products/vendor/my-products
-// @access  Private (Vendor only)
-exports.getMyVendorProducts = async (req, res, next) => {
+// @access  Private (Vendor)
+exports.getVendorProducts = async (req, res) => {
   try {
-    const vendor = req.vendor;
+    const vendor = await Vendor.findOne({ user: req.user.id });
     if (!vendor) {
-      return res.status(404).json({
-        success: false,
-        message: 'Vendor profile not found for this account',
-      });
+      return res.status(404).json({ success: false, message: 'Vendor store profile not found' });
     }
 
     const products = await Product.find({ vendor: vendor._id }).sort({ createdAt: -1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: products.length,
       products,
     });
   } catch (err) {
-    next(err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Create new product (Vendor only)
+// @desc    4. Create a new product (Vendor only with SaaS limit check)
 // @route   POST /api/products
-// @access  Private (Vendor only)
-exports.createProduct = async (req, res, next) => {
+// @access  Private (Vendor)
+exports.createProduct = async (req, res) => {
   try {
-    const vendor = req.vendor;
+    const vendor = await Vendor.findOne({ user: req.user.id }).populate('subscriptionPlan');
     if (!vendor) {
-      return res.status(404).json({
+      return res.status(404).json({ success: false, message: 'Vendor store profile not found' });
+    }
+
+    // SaaS Plan limit check
+    const currentCount = await Product.countDocuments({ vendor: vendor._id });
+    const maxAllowed = vendor.subscriptionPlan?.maxProducts || 15;
+
+    if (currentCount >= maxAllowed) {
+      return res.status(403).json({
         success: false,
-        message: 'Vendor profile required to create products',
+        message: `Your current SaaS plan limit (${maxAllowed} products) is reached. Please upgrade to Pro Tier!`,
       });
     }
 
-    // SaaS Feature Gating: Enforce max product limit based on vendor's plan
-    if (vendor.subscriptionPlan) {
-      const plan = await SubscriptionPlan.findById(vendor.subscriptionPlan);
-      if (plan && plan.maxProducts !== -1) {
-        const currentCount = await Product.countDocuments({ vendor: vendor._id });
-        if (currentCount >= plan.maxProducts) {
-          return res.status(403).json({
-            success: false,
-            message: `Product limit reached for ${plan.name} (${plan.maxProducts} max). Please upgrade to Pro or Enterprise.`,
-          });
-        }
+    // Default category fallback images if image URL is empty
+    let imageUrl = req.body.images?.[0]?.url;
+    if (!imageUrl || imageUrl.includes('shopspheredemo')) {
+      switch (req.body.category) {
+        case 'Beauty & Wellness':
+          imageUrl = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=500';
+          break;
+        case 'Fashion & Apparel':
+          imageUrl = 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=500';
+          break;
+        case 'Home & Kitchen':
+          imageUrl = 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=500';
+          break;
+        default:
+          imageUrl = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500';
       }
     }
 
-    const {
-      title,
-      description,
-      category,
-      brand,
-      price,
-      discountPrice,
-      stock,
-      images,
-      attributes,
-    } = req.body;
-
     const product = await Product.create({
+      ...req.body,
       vendor: vendor._id,
-      title,
-      description,
-      category,
-      brand: brand || 'Generic',
-      price: Number(price),
-      discountPrice: discountPrice ? Number(discountPrice) : 0,
-      stock: Number(stock),
-      images: images && images.length > 0 ? images : [{ url: 'https://ik.imagekit.io/shopspheredemo/default-product.png' }],
-      attributes: attributes || [],
+      images: [{ url: imageUrl }],
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
-      message: 'Product created successfully',
+      message: 'Product listed successfully!',
       product,
     });
   } catch (err) {
-    next(err);
+    console.error('Create product error:', err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Update product
-// @route   PUT /api/products/:id
-// @access  Private (Vendor only)
-exports.updateProduct = async (req, res, next) => {
-  try {
-    let product = await Product.findById(req.params.id);
-
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found',
-      });
-    }
-
-    // Ensure product belongs to this vendor
-    if (
-      product.vendor.toString() !== req.vendor._id.toString() &&
-      req.user.role !== 'admin'
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to modify this product',
-      });
-    }
-
-    product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Product updated successfully',
-      product,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// @desc    Delete product
+// @desc    5. Delete Product
 // @route   DELETE /api/products/:id
-// @access  Private (Vendor only)
-exports.deleteProduct = async (req, res, next) => {
+// @access  Private (Vendor / Admin)
+exports.deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
-
     if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found',
-      });
+      return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    if (
-      product.vendor.toString() !== req.vendor._id.toString() &&
-      req.user.role !== 'admin'
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to delete this product',
-      });
+    // Check ownership if vendor
+    if (req.user.role === 'vendor') {
+      const vendor = await Vendor.findOne({ user: req.user.id });
+      if (!vendor || product.vendor.toString() !== vendor._id.toString()) {
+        return res.status(403).json({ success: false, message: 'Not authorized to delete this product' });
+      }
     }
 
     await Product.findByIdAndDelete(req.params.id);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'Product deleted successfully',
     });
   } catch (err) {
-    next(err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };

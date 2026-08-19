@@ -1,104 +1,111 @@
 import React from 'react';
-import { Star, Store, ShieldCheck, ShoppingCart, MessageSquare } from 'lucide-react';
+import { ShoppingBag, MessageCircle, Star, Store, ShieldCheck } from 'lucide-react';
 
-export default function ProductCard({ product, onAddToCart, onOpenChat, onSelectProduct }) {
-  const discountPercent = product.discountPrice
-    ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
-    : 0;
+export default function ProductCard({ product, onAddToCart, onOpenChat, onSelect }) {
+  // Category-based high quality fallback images
+  const getCategoryFallbackImage = (cat) => {
+    switch (cat) {
+      case 'Beauty & Wellness':
+        return 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=600';
+      case 'Fashion & Apparel':
+        return 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=600';
+      case 'Home & Kitchen':
+        return 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=600';
+      default:
+        return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600';
+    }
+  };
 
-  const displayPrice = product.discountPrice || product.price;
-  const primaryImage = product.images?.[0]?.url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600';
+  const fallbackImage = getCategoryFallbackImage(product.category);
+  const primaryImage = product.images?.[0]?.url || fallbackImage;
+
+  const displayPrice = product.discountPrice > 0 ? product.discountPrice : product.price;
+  const originalPrice = product.discountPrice > 0 ? product.price : null;
 
   return (
-    <div className="group bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-300 flex flex-col overflow-hidden">
+    <div className="group bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs hover:shadow-xl hover:border-indigo-200 transition-all duration-300 flex flex-col justify-between">
       {/* Product Image Box */}
       <div
-        onClick={() => onSelectProduct(product)}
-        className="relative aspect-square w-full bg-slate-100 overflow-hidden cursor-pointer"
+        onClick={() => onSelect && onSelect(product)}
+        className="relative overflow-hidden aspect-square bg-slate-100 cursor-pointer"
       >
         <img
           src={primaryImage}
           alt={product.title}
-          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-          loading="lazy"
+          onError={(e) => { e.target.src = fallbackImage; }}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
 
-        {/* Discount Badge */}
-        {discountPercent > 0 && (
-          <span className="absolute top-3 left-3 bg-rose-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-sm">
-            {discountPercent}% OFF
-          </span>
-        )}
+        {/* Vendor Badge */}
+        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-slate-700 flex items-center gap-1 shadow-sm border border-slate-200/60">
+          <Store size={12} className="text-indigo-600 shrink-0" />
+          <span className="truncate max-w-[110px]">{product.vendor?.storeName || 'Verified Merchant'}</span>
+        </div>
 
-        {/* Category Pill */}
-        <span className="absolute bottom-3 left-3 bg-slate-900/70 backdrop-blur-md text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full">
-          {product.category}
-        </span>
+        {/* Discount Tag */}
+        {originalPrice && (
+          <div className="absolute top-3 right-3 bg-rose-500 text-white px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide shadow-sm">
+            {Math.round(((originalPrice - displayPrice) / originalPrice) * 100)}% OFF
+          </div>
+        )}
       </div>
 
-      {/* Product Details */}
+      {/* Product Content Details */}
       <div className="p-4 flex-1 flex flex-col justify-between">
         <div>
-          {/* Vendor Identifier Badge */}
-          {product.vendor && (
-            <div className="flex items-center gap-1.5 text-xs text-indigo-600 font-semibold mb-1.5">
-              <Store size={13} />
-              <span className="truncate">{product.vendor.storeName}</span>
-              {product.vendor.isVerified && (
-                <ShieldCheck size={14} className="text-emerald-500 shrink-0" title="Verified Merchant" />
-              )}
+          <div className="flex items-center justify-between gap-1 mb-1">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+              {product.category}
+            </span>
+            <div className="flex items-center gap-1 text-amber-500 text-xs font-bold">
+              <Star size={13} className="fill-amber-400 text-amber-400" />
+              <span>{product.rating || 4.8}</span>
             </div>
-          )}
+          </div>
 
-          {/* Product Title */}
           <h3
-            onClick={() => onSelectProduct(product)}
-            className="font-bold text-slate-800 text-sm leading-snug line-clamp-2 hover:text-indigo-600 cursor-pointer transition mb-2"
+            onClick={() => onSelect && onSelect(product)}
+            className="font-bold text-slate-900 text-sm line-clamp-2 hover:text-indigo-600 cursor-pointer transition mt-1"
           >
             {product.title}
           </h3>
-
-          {/* Rating */}
-          <div className="flex items-center gap-1 text-xs text-amber-500 mb-3">
-            <Star size={14} className="fill-amber-400 text-amber-400" />
-            <span className="font-bold text-slate-700">{product.rating || '4.8'}</span>
-            <span className="text-slate-400 text-[11px]">({product.numReviews || 12})</span>
-          </div>
         </div>
 
-        {/* Pricing & Add to Cart Action */}
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+        <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between">
           <div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-base font-extrabold text-slate-900">
+              <span className="text-base font-black text-slate-900">
                 ₹{displayPrice.toLocaleString('en-IN')}
               </span>
-              {product.discountPrice > 0 && (
-                <span className="text-xs text-slate-400 line-through">
-                  ₹{product.price.toLocaleString('en-IN')}
+              {originalPrice && (
+                <span className="text-xs text-slate-400 line-through font-semibold">
+                  ₹{originalPrice.toLocaleString('en-IN')}
                 </span>
               )}
             </div>
-            <span className={`text-[10px] font-semibold ${product.stock > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {product.stock > 0 ? `${product.stock} in stock` : 'Out of Stock'}
+            <span className="text-[10px] text-emerald-600 font-semibold block">
+              {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
             </span>
           </div>
 
+          {/* Action Buttons */}
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => onOpenChat(product)}
-              title="Chat with Vendor"
-              className="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 transition"
+              type="button"
+              onClick={() => onOpenChat && onOpenChat(product)}
+              title="Chat with Seller"
+              className="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 transition"
             >
-              <MessageSquare size={16} />
+              <MessageCircle size={15} />
             </button>
 
             <button
-              onClick={() => onAddToCart(product)}
+              type="button"
+              onClick={() => onAddToCart && onAddToCart(product)}
               disabled={product.stock <= 0}
-              className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white text-xs font-semibold px-3 py-2 rounded-xl shadow-sm shadow-indigo-100 transition"
+              className="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3 py-2 rounded-xl shadow-sm shadow-indigo-200 transition disabled:opacity-50"
             >
-              <ShoppingCart size={14} />
+              <ShoppingBag size={14} />
               <span>Add</span>
             </button>
           </div>
