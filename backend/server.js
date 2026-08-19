@@ -1,82 +1,57 @@
 const express = require('express');
 const http = require('http');
+const { Server } = require('socket.io');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const cookieParser = require('cookie-parser');
-const morgan = require('morgan');
-const { Server } = require('socket.io');
-const aiRoutes = require('./routes/aiRoutes');
+const path = require('path');
+const fs = require('fs');
+
+const connectDB = require('./config/db');
+
 // Load environment variables
 dotenv.config();
 
-const connectDB = require('./config/db');
-const errorHandler = require('./middleware/errorHandler');
-
-// Route files
-const authRoutes = require('./routes/authRoutes');
-const productRoutes = require('./routes/productRoutes');
-const vendorRoutes = require('./routes/vendorRoutes');
-const mediaRoutes = require('./routes/mediaRoutes');
-const orderRoutes = require('./routes/orderRoutes');
-const chatRoutes = require('./routes/chatRoutes');
-
-// Connect to MongoDB
+// Connect to Database
 connectDB();
 
 const app = express();
 const server = http.createServer(app);
 
-// Smart CORS Allowed Origins
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5173/',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:5173/',
-];
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
-      callback(null, true);
-    } else {
-      callback(null, true); // Allow during development
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-};
-
-// Apply CORS to Express
-app.use(cors(corsOptions));
-
-// ⚡ Initialize Socket.io
+// ⚡ Socket.io Gateway Setup
 const io = new Server(server, {
-  cors: corsOptions,
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  },
 });
 
-// Pass `io` to express app for controllers
 app.set('io', io);
 
-// Socket.io Real-Time Gateway Event Listeners
+// Middlewares
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// 🛣️ API Routes
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/vendors', require('./routes/vendorRoutes'));
+app.use('/api/products', require('./routes/productRoutes'));
+app.use('/api/orders', require('./routes/orderRoutes'));
+app.use('/api/chat', require('./routes/chatRoutes'));
+app.use('/api/ai', require('./routes/aiRoutes'));
+
+// Health Check Endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'OK', message: 'ShopSphere Cloud Gateway Live' });
+});
+
+// ⚡ Socket.io Real-Time Room Listeners
 io.on('connection', (socket) => {
   console.log(`[Socket Connected]: ${socket.id}`);
 
-  socket.on('join_user_room', (userId) => {
-    socket.join(`user:${userId}`);
-  });
-
   socket.on('join_conversation', (conversationId) => {
     socket.join(`convo:${conversationId}`);
-    console.log(`[Socket]: Joined conversation room convo:${conversationId}`);
-  });
-
-  socket.on('typing_start', ({ conversationId, userName }) => {
-    socket.to(`convo:${conversationId}`).emit('user_typing', { userName, isTyping: true });
-  });
-
-  socket.on('typing_stop', ({ conversationId }) => {
-    socket.to(`convo:${conversationId}`).emit('user_typing', { isTyping: false });
+    console.log(`Socket ${socket.id} joined room convo:${conversationId}`);
   });
 
   socket.on('disconnect', () => {
@@ -84,52 +59,24 @@ io.on('connection', (socket) => {
   });
 });
 
-// Middlewares
-app.use(express.json());
-app.use(cookieParser());
+// 🌐 Serve React Frontend Build (Production / Cloud)
+const frontendDistPath = path.resolve(__dirname, '../frontend/dist');
 
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-}
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'online',
-    platform: 'ShopSphere Multi-Vendor SaaS API',
-    timestamp: new Date().toISOString(),
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(frontendDistPath, 'index.html'));
   });
-});
-
-// Mount Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/vendors', vendorRoutes);
-app.use('/api/media', mediaRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/ai', aiRoutes);
-
-// Centralized Error Handler
-app.use(errorHandler);
+} else {
+  app.get('/', (req, res) => {
+    res.send('<h1>ShopSphere API Server is Running!</h1><p>Building frontend...</p>');
+  });
+}
 
 const PORT = process.env.PORT || 5000;
 
-//  Serve Frontend in Production Mode
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../frontend', 'dist', 'index.html'));
-  });
-}
-
 server.listen(PORT, () => {
-  console.log(`===================================================`);
   console.log(`🚀 ShopSphere Server running on port ${PORT}`);
-  console.log(`📡 Health Check: http://localhost:${PORT}/api/health`);
   console.log(`💬 Socket.io Real-Time Gateway: Online`);
-  console.log(`===================================================`);
 });
-
-module.exports = { app, server, io };

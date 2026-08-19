@@ -1,14 +1,14 @@
 {
-  "name": "shopsphere-monorepo",
+  "name": "shopsphere-marketplace",
   "version": "1.0.0",
-  "description": "ShopSphere Multi-Vendor Cloud Marketplace Fullstack Platform",
+  "description": "ShopSphere Multi-Vendor Cloud Marketplace",
   "main": "backend/server.js",
   "scripts": {
-    "build": "cd frontend && npm install && npm run build && cd ../backend && npm install",
-    "start": "cd backend && node server.js",
-    "seed": "cd backend && node seeds/seedData.js"
+    "build": "npm --prefix frontend install && npm --prefix frontend run build && npm --prefix backend install",
+    "start": "node backend/server.js",
+    "seed": "node backend/seeds/seedData.js"
   },
-  "keywords": ["mern", "multi-vendor", "socket.io", "react", "marketplace"],
+  "keywords": ["mern", "multi-vendor", "socket.io", "react"],
   "author": "",
   "license": "ISC"
 }
