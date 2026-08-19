@@ -12,7 +12,8 @@ import {
   EyeOff,
   ShoppingBag,
   Store,
-  ShieldCheck
+  ShieldCheck,
+  Building
 } from 'lucide-react';
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
@@ -27,7 +28,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
     email: '',
     password: '',
     phone: '',
-    role: 'customer',
+    role: 'customer', // 'customer' | 'vendor'
+    storeName: '',
   });
 
   if (!isOpen) return null;
@@ -45,13 +47,12 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
       }
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Authentication failed. Please check credentials.');
+      setError(err.response?.data?.message || 'Authentication failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
   };
 
-  // ⚡ 1-Click Instant Demo Login
   const handleQuickLogin = async (email, password) => {
     setError('');
     setLoading(true);
@@ -69,19 +70,18 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 font-['Plus_Jakarta_Sans',sans-serif]">
       <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 relative animate-in fade-in zoom-in-95 duration-200">
 
-        {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 p-1 rounded-xl hover:bg-slate-100 transition"
+          className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 p-1 rounded-xl hover:bg-slate-100 transition cursor-pointer"
         >
           <X size={18} />
         </button>
 
-        {/* Tab Headers */}
+        {/* Tab Switcher */}
         <div className="flex gap-4 border-b border-slate-100 pb-3 mb-5">
           <button
             onClick={() => { setIsLogin(true); setError(''); }}
-            className={`text-lg font-black pb-1 transition relative ${
+            className={`text-lg font-black pb-1 transition relative cursor-pointer ${
               isLogin ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
@@ -90,7 +90,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
           </button>
           <button
             onClick={() => { setIsLogin(false); setError(''); }}
-            className={`text-lg font-black pb-1 transition relative ${
+            className={`text-lg font-black pb-1 transition relative cursor-pointer ${
               !isLogin ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
@@ -99,9 +99,9 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
           </button>
         </div>
 
-        {/* ⚡ 1-Click Instant Demo Credentials */}
+        {/* ⚡ 1-Click Instant Demo Login (On Sign In Tab) */}
         {isLogin && (
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 mb-5 space-y-2">
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 mb-4 space-y-2">
             <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">
               1-Click Instant Demo Login:
             </span>
@@ -109,7 +109,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
               <button
                 type="button"
                 onClick={() => handleQuickLogin('rohan@gmail.com', 'Password@123')}
-                className="flex items-center justify-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold py-2 rounded-xl transition shadow-2xs"
+                className="flex items-center justify-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold py-2 rounded-xl transition shadow-2xs cursor-pointer"
               >
                 <ShoppingBag size={13} />
                 <span>Customer</span>
@@ -118,7 +118,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
               <button
                 type="button"
                 onClick={() => handleQuickLogin('techzone@shopsphere.io', 'Password@123')}
-                className="flex items-center justify-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold py-2 rounded-xl transition shadow-2xs"
+                className="flex items-center justify-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold py-2 rounded-xl transition shadow-2xs cursor-pointer"
               >
                 <Store size={13} />
                 <span>Vendor</span>
@@ -127,7 +127,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
               <button
                 type="button"
                 onClick={() => handleQuickLogin('admin@shopsphere.io', 'Password@123')}
-                className="flex items-center justify-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-bold py-2 rounded-xl transition shadow-2xs"
+                className="flex items-center justify-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-bold py-2 rounded-xl transition shadow-2xs cursor-pointer"
               >
                 <ShieldCheck size={13} />
                 <span>Admin</span>
@@ -139,13 +139,48 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
         {/* Error Alert */}
         {error && (
           <div className="bg-rose-50 border border-rose-200 text-rose-600 text-xs rounded-xl p-3 flex items-center gap-2 mb-4">
-            <AlertCircle size={16} className="shrink-0" />
+            <AlertCircle size={15} className="shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        {/* Form */}
+        {/* Auth Form */}
         <form onSubmit={handleSubmit} className="space-y-3.5">
+
+          {/* 👥 Account Role Selection (On Create Account Tab) */}
+          {!isLogin && (
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1.5">Select Account Type</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, role: 'customer' })}
+                  className={`p-2.5 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer ${
+                    formData.role === 'customer'
+                      ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-xs'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <ShoppingBag size={14} />
+                  <span>Customer (Buyer)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, role: 'vendor' })}
+                  className={`p-2.5 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer ${
+                    formData.role === 'vendor'
+                      ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-xs'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <Store size={14} />
+                  <span>Vendor (Seller)</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {!isLogin && (
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Full Name</label>
@@ -157,6 +192,24 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
                   placeholder="e.g. Khushi Sharma"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 focus:bg-white focus:outline-none focus:border-indigo-500 transition"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* If Vendor: Show Store Name input */}
+          {!isLogin && formData.role === 'vendor' && (
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Store / Business Name</label>
+              <div className="relative">
+                <Building size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Aura Lifestyle & Crafts"
+                  value={formData.storeName}
+                  onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
                   className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 focus:bg-white focus:outline-none focus:border-indigo-500 transition"
                 />
               </div>
@@ -193,7 +246,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
@@ -202,7 +255,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
 
           {!isLogin && (
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">10-Digit Phone</label>
+              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">10-Digit Mobile Number</label>
               <div className="relative">
                 <Phone size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
                 <input
@@ -220,7 +273,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl shadow-md shadow-indigo-200 transition flex items-center justify-center gap-2 mt-4 cursor-pointer"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs py-3.5 rounded-xl shadow-md shadow-indigo-200 transition flex items-center justify-center gap-2 mt-4 cursor-pointer"
           >
             <span>{loading ? 'Processing...' : isLogin ? 'Sign In' : 'Create Account'}</span>
             <ArrowRight size={15} />

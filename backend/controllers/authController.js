@@ -26,12 +26,12 @@ const sendTokenResponse = (user, statusCode, res) => {
   });
 };
 
-// @desc    1. Register User
+// @desc    1. Register User (Supports Customer & Vendor Store Creation)
 // @route   POST /api/auth/register
 // @access  Public
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role, phone } = req.body;
+    const { name, email, password, role, phone, storeName } = req.body;
     const cleanEmail = email.toLowerCase().trim();
 
     let user = await User.findOne({ email: cleanEmail });
@@ -47,13 +47,25 @@ exports.register = async (req, res) => {
       phone: phone || '',
     });
 
+    // If registered as Vendor, auto-create Vendor profile
+    if (user.role === 'vendor') {
+      const slug = (storeName || `${name} Store`).toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now();
+      await Vendor.create({
+        user: user._id,
+        storeName: storeName || `${name}'s Store`,
+        storeSlug: slug,
+        description: `Official marketplace storefront for ${name}.`,
+        commissionRate: 5.0,
+        isVerified: true,
+      });
+    }
+
     return sendTokenResponse(user, 201, res);
   } catch (err) {
     console.error('Registration Error:', err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
-
 // @desc    2. Login User
 // @route   POST /api/auth/login
 // @access  Public

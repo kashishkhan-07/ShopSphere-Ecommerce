@@ -6,14 +6,11 @@ import {
   Search,
   MessageCircle,
   LogOut,
-  User,
-  ShieldCheck,
-  Store,
-  Package,
   Sparkles,
   Menu,
   X,
-  ChevronRight
+  ShieldCheck,
+  Store
 } from 'lucide-react';
 
 export default function Navbar({
@@ -52,75 +49,83 @@ export default function Navbar({
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 font-['Plus_Jakarta_Sans',sans-serif] w-full max-w-full">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 font-['Plus_Jakarta_Sans',sans-serif] w-full">
 
-        {/* ⚡ Top Persona Switcher Bar */}
-        <div className="bg-slate-900 text-white text-[11px] px-3 sm:px-6 py-1.5 flex items-center justify-between overflow-x-auto [scrollbar-width:none]">
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider hidden sm:flex items-center gap-1">
-              <Sparkles size={11} className="text-amber-400" /> Persona:
+        {/* ⚡ Top Persona Switcher Bar (Exact Image 3 Style) */}
+        <div className="bg-slate-900 text-white text-[11px] px-4 py-1.5 flex items-center justify-between overflow-x-auto [scrollbar-width:none]">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider flex items-center gap-1">
+              <Sparkles size={11} className="text-amber-400" /> SWITCH PERSONA:
             </span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => handleRoleSwitch('customer')}
-                className={`px-2 py-0.5 rounded-md font-bold text-[10px] sm:text-xs transition ${
+                className={`px-2.5 py-0.5 rounded-md font-bold transition cursor-pointer ${
                   !isVendor && !isAdmin && isAuthenticated
                     ? 'bg-emerald-500 text-white shadow-xs'
                     : 'bg-slate-800 text-slate-300 hover:text-white'
                 }`}
               >
-                🛍️ Buyer
+                🛍️ Customer (Rohan)
               </button>
               <button
                 onClick={() => handleRoleSwitch('vendor')}
-                className={`px-2 py-0.5 rounded-md font-bold text-[10px] sm:text-xs transition ${
+                className={`px-2.5 py-0.5 rounded-md font-bold transition cursor-pointer ${
                   isVendor
                     ? 'bg-indigo-500 text-white shadow-xs'
                     : 'bg-slate-800 text-slate-300 hover:text-white'
                 }`}
               >
-                🏬 Vendor
+                🏬 Vendor (TechZone)
               </button>
               <button
                 onClick={() => handleRoleSwitch('admin')}
-                className={`px-2 py-0.5 rounded-md font-bold text-[10px] sm:text-xs transition ${
+                className={`px-2.5 py-0.5 rounded-md font-bold transition cursor-pointer ${
                   isAdmin
                     ? 'bg-amber-500 text-white shadow-xs'
                     : 'bg-slate-800 text-slate-300 hover:text-white'
                 }`}
               >
-                👑 Admin
+                👑 Super Admin
               </button>
             </div>
           </div>
 
-          <span className="text-slate-400 text-[10px] hidden lg:inline">
-            ShopSphere Multi-Tenant Cloud
+          <span className="text-slate-400 text-[10px] hidden md:inline">
+            ShopSphere Multi-Tenant Cloud Architecture
           </span>
         </div>
 
         {/* Main Navbar */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
 
-          {/* Logo */}
+          {/* 🌟 Exact Original 3D Glowing Cube Logo (From Image 3) 🌟 */}
           <button
             onClick={() => {
               setActiveTab('catalog');
               setMobileMenuOpen(false);
             }}
-            className="flex items-center gap-2 text-left group cursor-pointer shrink-0"
+            className="flex items-center gap-3 text-left group cursor-pointer shrink-0"
           >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-indigo-600 via-violet-600 to-cyan-400 flex items-center justify-center text-white shadow-md shadow-indigo-200 group-hover:scale-105 transition">
-              <Package size={18} className="stroke-[2.5]" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/30 group-hover:scale-105 transition-transform duration-300">
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m7.5 4.27 9 5.15" />
+                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                <path d="m3.3 7 8.7 5 8.7-5" />
+                <path d="M12 22V12" />
+              </svg>
             </div>
             <div>
-              <span className="font-black text-base sm:text-lg tracking-tight text-slate-900 flex items-center">
+              <span className="font-black text-lg tracking-tight text-slate-900 flex items-center">
                 ShopSphere<span className="text-indigo-600">.</span>
+              </span>
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block -mt-1">
+                Marketplace Cloud
               </span>
             </div>
           </button>
 
-          {/* Desktop Search Bar */}
+          {/* Search Bar */}
           <div className="flex-1 max-w-md hidden md:block relative">
             <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
             <input
@@ -135,21 +140,22 @@ export default function Navbar({
             />
           </div>
 
-          {/* Desktop Right Links */}
-          <div className="hidden md:flex items-center gap-2 shrink-0">
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center gap-3 shrink-0">
             <button
               onClick={() => setActiveTab('catalog')}
-              className={`text-xs font-bold px-3 py-2 rounded-xl transition ${
+              className={`text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer ${
                 activeTab === 'catalog' ? 'bg-slate-100 text-indigo-600' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Marketplace
             </button>
 
+            {/* Buyer My Orders */}
             {isAuthenticated && !isVendor && !isAdmin && (
               <button
                 onClick={() => setActiveTab('orders')}
-                className={`text-xs font-bold px-3 py-2 rounded-xl transition ${
+                className={`text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer ${
                   activeTab === 'orders' ? 'bg-slate-100 text-indigo-600' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -157,10 +163,11 @@ export default function Navbar({
               </button>
             )}
 
+            {/* Vendor Portal */}
             {isVendor && (
               <button
                 onClick={() => setActiveTab('vendor-portal')}
-                className={`text-xs font-bold px-3 py-2 rounded-xl transition ${
+                className={`text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer ${
                   activeTab === 'vendor-portal' ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
@@ -168,31 +175,37 @@ export default function Navbar({
               </button>
             )}
 
+            {/* 👑 Super Admin Dashboard Button */}
             {isAdmin && (
               <button
                 onClick={() => setActiveTab('admin-portal')}
-                className={`text-xs font-bold px-3 py-2 rounded-xl transition ${
-                  activeTab === 'admin-portal' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'text-slate-700 hover:bg-slate-100'
+                className={`text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer shadow-xs ${
+                  activeTab === 'admin-portal'
+                    ? 'bg-amber-500 text-white font-extrabold shadow-amber-200'
+                    : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
                 }`}
               >
                 👑 Admin Desk
               </button>
             )}
 
+            {/* 💬 Live Chat */}
             {isAuthenticated && (
               <button
                 onClick={onOpenChatDrawer}
                 className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3 py-2 rounded-xl transition cursor-pointer"
+                title="Open Live Chat Messenger"
               >
                 <MessageCircle size={15} className="text-indigo-600" />
                 <span>Live Chat</span>
               </button>
             )}
 
+            {/* 🛒 Shopping Cart (Only for Buyers) */}
             {!isVendor && !isAdmin && (
               <button
                 onClick={() => setActiveTab('cart')}
-                className="relative p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition"
+                className="relative p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
               >
                 <ShoppingBag size={20} />
                 {cartCount > 0 && (
@@ -204,7 +217,7 @@ export default function Navbar({
             )}
 
             {isAuthenticated ? (
-              <div className="flex items-center gap-1.5 pl-1 border-l border-slate-200">
+              <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
                 <button
                   onClick={() => setShowProfileModal(true)}
                   className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 p-1.5 px-2.5 rounded-2xl transition cursor-pointer"
@@ -237,177 +250,73 @@ export default function Navbar({
             )}
           </div>
 
-          {/* 📱 Mobile Right Header Actions */}
-          <div className="flex md:hidden items-center gap-1.5">
+          {/* Mobile Right */}
+          <div className="flex md:hidden items-center gap-2">
             {!isVendor && !isAdmin && (
-              <button
-                onClick={() => setActiveTab('cart')}
-                className="relative p-2 text-slate-700"
-              >
+              <button onClick={() => setActiveTab('cart')} className="relative p-2 text-slate-700">
                 <ShoppingBag size={20} />
                 {cartCount > 0 && (
-                  <span className="absolute 0 top-0 right-0 bg-indigo-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                  <span className="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
                     {cartCount}
                   </span>
                 )}
               </button>
             )}
 
-            {isAuthenticated && (
-              <button
-                onClick={onOpenChatDrawer}
-                className="p-2 text-indigo-600"
-              >
-                <MessageCircle size={20} />
-              </button>
-            )}
-
-            {/* Hamburger Toggle */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-slate-700 hover:text-indigo-600 rounded-xl"
-            >
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-slate-700">
               {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
         </div>
 
-        {/* 📱 Mobile Dropdown Menu Drawer */}
+        {/* Mobile Dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-b border-slate-200 px-4 py-4 space-y-3 animate-in slide-in-from-top-3">
-
-            {/* Search Input for Mobile */}
-            <div className="relative">
-              <Search size={15} className="absolute left-3 top-3 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (activeTab !== 'catalog') setActiveTab('catalog');
-                }}
-                className="w-full text-xs bg-slate-100 rounded-xl pl-9 pr-3 py-2.5 focus:outline-none"
-              />
+          <div className="md:hidden bg-white border-b border-slate-200 px-4 py-4 space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => { setActiveTab('catalog'); setMobileMenuOpen(false); }} className="p-2.5 text-xs font-bold bg-indigo-50 text-indigo-600 rounded-xl">Marketplace</button>
+              {isAuthenticated && (
+                <button onClick={() => { onOpenChatDrawer(); setMobileMenuOpen(false); }} className="p-2.5 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Live Chat</button>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <button
-                onClick={() => {
-                  setActiveTab('catalog');
-                  setMobileMenuOpen(false);
-                }}
-                className={`text-xs font-bold p-2.5 rounded-xl text-center ${
-                  activeTab === 'catalog' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'
-                }`}
-              >
-                Marketplace
+            {isAdmin && (
+              <button onClick={() => { setActiveTab('admin-portal'); setMobileMenuOpen(false); }} className="w-full bg-amber-50 text-amber-800 text-xs font-bold py-2.5 rounded-xl border border-amber-200">
+                👑 Super Admin Headquarters
               </button>
+            )}
 
-              {isAuthenticated && !isVendor && !isAdmin && (
-                <button
-                  onClick={() => {
-                    setActiveTab('orders');
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`text-xs font-bold p-2.5 rounded-xl text-center ${
-                    activeTab === 'orders' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'
-                  }`}
-                >
-                  My Orders
-                </button>
-              )}
+            {isVendor && (
+              <button onClick={() => { setActiveTab('vendor-portal'); setMobileMenuOpen(false); }} className="w-full bg-indigo-50 text-indigo-700 text-xs font-bold py-2.5 rounded-xl border border-indigo-200">
+                🏬 Vendor Portal
+              </button>
+            )}
 
-              {isVendor && (
-                <button
-                  onClick={() => {
-                    setActiveTab('vendor-portal');
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`text-xs font-bold p-2.5 rounded-xl text-center col-span-2 ${
-                    activeTab === 'vendor-portal' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'
-                  }`}
-                >
-                  🏬 Vendor Merchant Portal
-                </button>
-              )}
-
-              {isAdmin && (
-                <button
-                  onClick={() => {
-                    setActiveTab('admin-portal');
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`text-xs font-bold p-2.5 rounded-xl text-center col-span-2 ${
-                    activeTab === 'admin-portal' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'
-                  }`}
-                >
-                  👑 Super Admin Headquarters
-                </button>
-              )}
-            </div>
-
-            {/* Profile / Auth Bar in Mobile Menu */}
             {isAuthenticated ? (
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <button
-                  onClick={() => {
-                    setShowProfileModal(true);
-                    setMobileMenuOpen(false);
-                  }}
-                  className="flex items-center gap-2.5"
-                >
-                  <img
-                    src={user.avatar || getAvatar(user.name)}
-                    alt={user.name}
-                    className="w-8 h-8 rounded-full object-cover border border-slate-200"
-                  />
-                  <div className="text-left">
-                    <span className="text-xs font-bold text-slate-900 block">{user.name}</span>
-                    <span className="text-[10px] text-emerald-600 font-bold uppercase block">{user.role}</span>
-                  </div>
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <button onClick={() => { setShowProfileModal(true); setMobileMenuOpen(false); }} className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                  <img src={user.avatar || getAvatar(user.name)} className="w-7 h-7 rounded-full object-cover" />
+                  <span>{user.name}</span>
                 </button>
-
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    setShowLogoutConfirm(true);
-                  }}
-                  className="bg-rose-50 text-rose-600 text-xs font-bold px-3 py-1.5 rounded-xl border border-rose-200 flex items-center gap-1"
-                >
-                  <LogOut size={13} />
-                  <span>Logout</span>
+                <button onClick={() => { setMobileMenuOpen(false); setShowLogoutConfirm(true); }} className="text-xs font-bold text-rose-600 bg-rose-50 px-3 py-1.5 rounded-xl">
+                  Logout
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  openAuthModal('login');
-                }}
-                className="w-full bg-indigo-600 text-white text-xs font-bold py-3 rounded-xl shadow-md"
-              >
-                Sign In / Register
+              <button onClick={() => { setMobileMenuOpen(false); openAuthModal('login'); }} className="w-full bg-indigo-600 text-white text-xs font-bold py-2.5 rounded-xl">
+                Sign In
               </button>
             )}
           </div>
         )}
       </header>
 
-      {/* Profile Modal */}
-      <ProfileModal
-        isOpen={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
-      />
+      <ProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />
 
-      {/* Logout Confirmation */}
+      {/* Logout Confirmation Permission Modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center relative">
-            <button
-              onClick={() => setShowLogoutConfirm(false)}
-              className="absolute top-4 right-4 text-slate-400 p-1"
-            >
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 font-['Plus_Jakarta_Sans',sans-serif]">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl text-center relative">
+            <button onClick={() => setShowLogoutConfirm(false)} className="absolute top-4 right-4 text-slate-400">
               <X size={18} />
             </button>
             <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
@@ -418,20 +327,10 @@ export default function Navbar({
               Are you sure you want to end your current session for <strong>{user?.name}</strong>?
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="w-full py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200"
-              >
+              <button onClick={() => setShowLogoutConfirm(false)} className="w-full py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100">
                 Cancel
               </button>
-              <button
-                onClick={() => {
-                  setShowLogoutConfirm(false);
-                  logout();
-                  setActiveTab('catalog');
-                }}
-                className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-md"
-              >
+              <button onClick={() => { setShowLogoutConfirm(false); logout(); setActiveTab('catalog'); }} className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 shadow-md">
                 Yes, Sign Out
               </button>
             </div>
