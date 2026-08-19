@@ -59,17 +59,18 @@ io.on('connection', (socket) => {
   });
 });
 
-// 🌐 Serve React Frontend Build (Production / Cloud)
+// 🌐 Serve React Frontend Build (Universal Express 4 & 5 Compatible)
 const frontendDistPath = path.resolve(__dirname, '../frontend/dist');
 
 if (fs.existsSync(frontendDistPath)) {
   app.use(express.static(frontendDistPath));
 
-  app.get('*', (req, res) => {
+  // Universal Catch-All for React SPA Client Routing
+  app.use((req, res) => {
     res.sendFile(path.resolve(frontendDistPath, 'index.html'));
   });
 } else {
-  app.get('/', (req, res) => {
+  app.use((req, res) => {
     res.send('<h1>ShopSphere API Server is Running!</h1><p>Building frontend...</p>');
   });
 }
