@@ -1,14 +1,14 @@
 import axios from 'axios';
 
+// Auto-detects Live Render Server or Localhost
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
-  withCredentials: true,
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Automatically attach JWT token from localStorage to every API request
+// Interceptor to attach JWT token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('shopsphere_token');

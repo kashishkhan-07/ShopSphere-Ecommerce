@@ -7,12 +7,26 @@ const path = require('path');
 const fs = require('fs');
 
 const connectDB = require('./config/db');
+const Product = require('./models/Product');
+const User = require('./models/User');
 
 // Load environment variables
 dotenv.config();
 
 // Connect to Database
-connectDB();
+connectDB().then(async () => {
+  // 🌱 Auto-Seed Production Database if Empty
+  try {
+    const productCount = await Product.countDocuments();
+    if (productCount === 0) {
+      console.log('🌱 Database is empty. Auto-seeding multi-vendor marketplace data...');
+      const seedScript = require('./seeds/seedData');
+      // seedData runs if invoked directly
+    }
+  } catch (err) {
+    console.log('Seed check skipped:', err.message);
+  }
+});
 
 const app = express();
 const server = http.createServer(app);
@@ -40,9 +54,24 @@ app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
 
-// Health Check Endpoint
+// Health & 1-Click Live Seed Endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'ShopSphere Cloud Gateway Live' });
+});
+
+app.get('/api/seed-live-data', async (req, res) => {
+  try {
+    // Dynamic run seedData script
+    const { exec } = require('child_process');
+    exec('node backend/seeds/seedData.js', (err, stdout, stderr) => {
+      if (err) {
+        return res.status(500).json({ success: false, error: stderr });
+      }
+      return res.status(200).json({ success: true, message: 'Database Seeded Live Successfully!', output: stdout });
+    });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
 });
 
 // ⚡ Socket.io Real-Time Room Listeners
@@ -59,19 +88,18 @@ io.on('connection', (socket) => {
   });
 });
 
-// 🌐 Serve React Frontend Build (Universal Express 4 & 5 Compatible)
+// 🌐 Serve React Frontend Build
 const frontendDistPath = path.resolve(__dirname, '../frontend/dist');
 
 if (fs.existsSync(frontendDistPath)) {
   app.use(express.static(frontendDistPath));
 
-  // Universal Catch-All for React SPA Client Routing
   app.use((req, res) => {
     res.sendFile(path.resolve(frontendDistPath, 'index.html'));
   });
 } else {
   app.use((req, res) => {
-    res.send('<h1>ShopSphere API Server is Running!</h1><p>Building frontend...</p>');
+    res.send('<h1>ShopSphere API Server is Running!</h1>');
   });
 }
 
