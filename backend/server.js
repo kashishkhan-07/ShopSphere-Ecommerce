@@ -115,6 +115,15 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
+//  Serve Frontend in Production Mode
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../frontend', 'dist', 'index.html'));
+  });
+}
+
 server.listen(PORT, () => {
   console.log(`===================================================`);
   console.log(`🚀 ShopSphere Server running on port ${PORT}`);
