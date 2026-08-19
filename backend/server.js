@@ -5,7 +5,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const { Server } = require('socket.io');
-
+const aiRoutes = require('./routes/aiRoutes');
 // Load environment variables
 dotenv.config();
 
@@ -18,6 +18,7 @@ const productRoutes = require('./routes/productRoutes');
 const vendorRoutes = require('./routes/vendorRoutes');
 const mediaRoutes = require('./routes/mediaRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 
 // Connect to MongoDB
 connectDB();
@@ -25,36 +26,51 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.io for real-time chat
-const io = new Server(server, {
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    methods: ['GET', 'POST'],
-    credentials: true,
+// Smart CORS Allowed Origins
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5173/',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5173/',
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow during development
+    }
   },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+// Apply CORS to Express
+app.use(cors(corsOptions));
+
+// ⚡ Initialize Socket.io
+const io = new Server(server, {
+  cors: corsOptions,
 });
 
-// Socket.io Real-Time Connection Gateway
+// Pass `io` to express app for controllers
+app.set('io', io);
+
+// Socket.io Real-Time Gateway Event Listeners
 io.on('connection', (socket) => {
   console.log(`[Socket Connected]: ${socket.id}`);
 
-  // User joins their personal room
   socket.on('join_user_room', (userId) => {
     socket.join(`user:${userId}`);
   });
 
-  // Join a specific chat room
   socket.on('join_conversation', (conversationId) => {
     socket.join(`convo:${conversationId}`);
+    console.log(`[Socket]: Joined conversation room convo:${conversationId}`);
   });
 
-  // Send message
-  socket.on('send_message', (data) => {
-    const { conversationId, message } = data;
-    io.to(`convo:${conversationId}`).emit('receive_message', message);
-  });
-
-  // Typing indicators
   socket.on('typing_start', ({ conversationId, userName }) => {
     socket.to(`convo:${conversationId}`).emit('user_typing', { userName, isTyping: true });
   });
@@ -71,12 +87,6 @@ io.on('connection', (socket) => {
 // Middlewares
 app.use(express.json());
 app.use(cookieParser());
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true,
-  })
-);
 
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
@@ -97,6 +107,8 @@ app.use('/api/products', productRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Centralized Error Handler
 app.use(errorHandler);
@@ -105,8 +117,9 @@ const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
   console.log(`===================================================`);
-  console.log(`🚀 ShopSphere Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(`🚀 ShopSphere Server running on port ${PORT}`);
   console.log(`📡 Health Check: http://localhost:${PORT}/api/health`);
+  console.log(`💬 Socket.io Real-Time Gateway: Online`);
   console.log(`===================================================`);
 });
 

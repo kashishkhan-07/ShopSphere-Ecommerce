@@ -2,151 +2,270 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import {
   Package,
-  Store,
   Truck,
-  Clock,
   CheckCircle,
+  Clock,
+  ShieldCheck,
   ExternalLink,
-  ChevronRight,
-  ShieldCheck
+  Ban,
+  X,
+  AlertTriangle,
+  Calendar
 } from 'lucide-react';
 
 export default function CustomerOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cancelModal, setCancelModal] = useState({ isOpen: false, orderId: null, orderTotal: 0 });
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    fetchMyOrders();
+    fetchOrders();
   }, []);
 
-  const fetchMyOrders = async () => {
+  const fetchOrders = async () => {
     try {
+      setLoading(true);
       const { data } = await api.get('/orders/my-orders');
       setOrders(data.orders || []);
     } catch (err) {
-      console.error('Error fetching orders:', err);
+      console.error('Failed to fetch orders:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'placed':
-        return <span className="text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">Order Placed</span>;
-      case 'processing':
-        return <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">Packing & Processing</span>;
-      case 'shipped':
-        return <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">Shipped / In Transit</span>;
-      case 'delivered':
-        return <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">Delivered</span>;
-      default:
-        return <span className="text-[10px] font-bold bg-slate-50 text-slate-700 px-2 py-0.5 rounded-full">Pending</span>;
+  const handleConfirmCancel = async () => {
+    if (!cancelModal.orderId) return;
+    setActionLoading(true);
+    try {
+      await api.patch(`/orders/${cancelModal.orderId}/cancel`);
+      setCancelModal({ isOpen: false, orderId: null, orderTotal: 0 });
+      fetchOrders();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to cancel order');
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto py-12 px-4 text-center">
-        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-        <p className="text-xs text-slate-500 font-semibold">Loading your order history...</p>
-      </div>
-    );
-  }
-
-  if (orders.length === 0) {
-    return (
-      <div className="max-w-md mx-auto my-12 p-8 bg-white rounded-3xl border border-slate-200 text-center shadow-sm">
-        <Package size={48} className="mx-auto text-slate-300 mb-3" />
-        <h3 className="text-lg font-bold text-slate-800">No orders placed yet</h3>
-        <p className="text-xs text-slate-400 mt-1 mb-4">Explore our multi-vendor marketplace and complete your first purchase!</p>
-      </div>
-    );
-  }
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const formattedDate = date.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    const formattedTime = date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+    return `${formattedDate} • ${formattedTime}`;
+  };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
-          <Package size={24} className="text-indigo-600" />
-          <span>My Orders & Multi-Vendor Tracking ({orders.length})</span>
-        </h1>
-        <p className="text-xs text-slate-500 mt-1">
-          Each seller fulfills their portion of your order independently.
-        </p>
+    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+            <Package size={24} className="text-indigo-600" />
+            <span>My Orders & Live Tracking</span>
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Real-time delivery progress and order cancellation management.
+          </p>
+        </div>
+        <span className="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-xl border border-indigo-200">
+          {orders.length} Total Orders
+        </span>
       </div>
 
-      <div className="space-y-6">
-        {orders.map((order) => (
-          <div key={order._id} className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-            {/* Parent Order Header */}
-            <div className="bg-slate-900 text-white p-4 sm:px-6 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-4">
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Order Placed</span>
-                  <span className="font-semibold">{new Date(order.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Total Paid</span>
-                  <span className="font-black text-emerald-400">₹{order.totalAmount.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="bg-slate-800 text-slate-300 font-mono px-2.5 py-1 rounded-lg text-[11px]">
-                  #{order._id.slice(-8).toUpperCase()}
-                </span>
-                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
-                  <ShieldCheck size={12} /> Stripe Escrow Paid
-                </span>
-              </div>
-            </div>
+      {loading ? (
+        <div className="p-12 text-center text-slate-400 text-xs">Loading orders...</div>
+      ) : orders.length > 0 ? (
+        <div className="space-y-6">
+          {orders.map((order) => {
+            const isRefunded = order.paymentStatus === 'refunded';
+            const canCancel = !isRefunded && order.subOrders?.every((s) => s.fulfillmentStatus === 'placed' || s.fulfillmentStatus === 'processing');
 
-            {/* Split Sub-Orders List */}
-            <div className="p-4 sm:p-6 divide-y divide-slate-100">
-              {order.subOrders && order.subOrders.map((sub) => (
-                <div key={sub._id} className="py-4 first:pt-0 last:pb-0 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Store size={16} className="text-indigo-600 shrink-0" />
-                      <span className="font-bold text-sm text-slate-800">
-                        {sub.vendor?.storeName || 'Verified Merchant Store'}
+            return (
+              <div
+                key={order._id}
+                className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs"
+              >
+                {/* 🌙 Dark Order Header with Date + Time */}
+                <div className="bg-slate-900 text-white px-5 py-4 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block tracking-wider">
+                        Order Placed Date & Time
+                      </span>
+                      <span className="font-bold text-white flex items-center gap-1.5 mt-0.5">
+                        <Clock size={12} className="text-indigo-400" />
+                        <span>{formatDateTime(order.createdAt)}</span>
                       </span>
                     </div>
-                    {getStatusBadge(sub.fulfillmentStatus)}
-                  </div>
 
-                  {/* Items in this sub-order */}
-                  <div className="space-y-2 pl-6">
-                    {sub.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={item.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100'}
-                            alt={item.title}
-                            className="w-10 h-10 rounded-xl object-cover border border-slate-200"
-                          />
-                          <span className="font-medium text-slate-700">{item.title} × {item.qty}</span>
-                        </div>
-                        <span className="font-bold text-slate-900">₹{(item.price * item.qty).toLocaleString('en-IN')}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Courier Tracking Details */}
-                  {sub.shippingCarrier && sub.trackingNumber && (
-                    <div className="bg-indigo-50/50 p-2.5 rounded-xl text-xs text-indigo-900 flex items-center justify-between border border-indigo-100 ml-6">
-                      <div className="flex items-center gap-2">
-                        <Truck size={14} className="text-indigo-600 shrink-0" />
-                        <span>Carrier: <strong>{sub.shippingCarrier}</strong> (ID: {sub.trackingNumber})</span>
-                      </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block tracking-wider">
+                        Total Amount
+                      </span>
+                      <span className="font-black text-emerald-400 text-sm block mt-0.5">
+                        ₹{order.totalAmount?.toLocaleString('en-IN')}
+                      </span>
                     </div>
-                  )}
+                  </div>
+
+                  <div className="flex items-center gap-2.5">
+                    <span className="font-mono text-slate-400 text-xs font-bold">
+                      #{order._id.slice(-8).toUpperCase()}
+                    </span>
+
+                    {/* Escrow Status Badge */}
+                    <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border flex items-center gap-1 ${
+                      isRefunded
+                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                        : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    }`}>
+                      <ShieldCheck size={12} />
+                      <span>{isRefunded ? 'Refunded to Escrow' : 'Stripe Escrow Paid'}</span>
+                    </span>
+
+                    {/* ❌ Cancel Order Button */}
+                    {canCancel && (
+                      <button
+                        onClick={() =>
+                          setCancelModal({
+                            isOpen: true,
+                            orderId: order._id,
+                            orderTotal: order.totalAmount,
+                          })
+                        }
+                        className="bg-rose-500/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-[11px] font-bold px-3 py-1 rounded-xl transition cursor-pointer flex items-center gap-1 ml-2"
+                      >
+                        <Ban size={12} />
+                        <span>Cancel Order</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              ))}
+
+                {/* Sub-Orders by Vendor */}
+                <div className="divide-y divide-slate-100 p-5 space-y-4">
+                  {order.subOrders?.map((sub) => (
+                    <div key={sub._id} className="pt-3 first:pt-0 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-900">
+                            🏬 Store: {sub.vendor?.storeName || 'Merchant'}
+                          </span>
+                        </div>
+
+                        {/* Fulfillment Status Pill */}
+                        <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
+                          sub.fulfillmentStatus === 'delivered'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : sub.fulfillmentStatus === 'cancelled'
+                            ? 'bg-slate-100 text-slate-500 border-slate-200 line-through'
+                            : sub.fulfillmentStatus === 'shipped'
+                            ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                          {sub.fulfillmentStatus}
+                        </span>
+                      </div>
+
+                      {/* Items */}
+                      <div className="space-y-2">
+                        {sub.items?.map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={item.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100'}
+                                alt={item.title}
+                                className="w-10 h-10 rounded-xl object-cover border border-slate-100"
+                              />
+                              <div>
+                                <h4 className="font-bold text-slate-800">{item.title}</h4>
+                                <span className="text-[10px] text-slate-400">Qty: {item.qty}</span>
+                              </div>
+                            </div>
+                            <span className="font-black text-slate-900">
+                              ₹{(item.price * item.qty).toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Live Courier Tracking Banner if Shipped */}
+                      {sub.trackingNumber && (
+                        <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 text-xs text-slate-600 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Truck size={14} className="text-indigo-600 shrink-0" />
+                            <span>
+                              Carrier: <strong>{sub.shippingCarrier}</strong> | Tracking ID: <strong className="font-mono text-indigo-600">{sub.trackingNumber}</strong>
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-xs">
+          <Package size={48} className="mx-auto text-slate-300 mb-3" />
+          <h3 className="text-base font-bold text-slate-800">No orders placed yet</h3>
+          <p className="text-xs text-slate-400 mt-1">
+            Browse our catalog, add items to your cart, and experience seamless Stripe escrow checkout.
+          </p>
+        </div>
+      )}
+
+      {/* 🛑 Cancellation Confirmation Modal */}
+      {cancelModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center relative font-['Plus_Jakarta_Sans',sans-serif] animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setCancelModal({ isOpen: false, orderId: null, orderTotal: 0 })}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-1 rounded-xl hover:bg-slate-100 transition"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <AlertTriangle size={24} />
+            </div>
+
+            <h3 className="text-base font-black text-slate-900 mb-1">Cancel This Order?</h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Your payment of <strong className="text-slate-900">₹{cancelModal.orderTotal.toLocaleString('en-IN')}</strong> will be instantly refunded back to your payment method from Escrow.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setCancelModal({ isOpen: false, orderId: null, orderTotal: 0 })}
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={handleConfirmCancel}
+                disabled={actionLoading}
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-200 transition cursor-pointer"
+              >
+                {actionLoading ? 'Cancelling...' : 'Yes, Cancel Order'}
+              </button>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

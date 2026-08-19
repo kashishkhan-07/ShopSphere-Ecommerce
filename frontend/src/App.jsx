@@ -1,35 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import ProductGrid from './components/ProductGrid';
-import VendorDashboard from './components/VendorDashboard';
-import CustomerOrders from './components/CustomerOrders';
 import CheckoutModal from './components/CheckoutModal';
+import CustomerOrders from './components/CustomerOrders';
+import VendorDashboard from './components/VendorDashboard';
+import AdminPortal from './components/AdminPortal';
+import ChatDrawer from './components/ChatDrawer';
+import AiChatbot from './components/AiChatbot';
 import AuthModal from './components/AuthModal';
 import {
   ShoppingBag,
-  CheckCircle,
-  Store,
-  ShieldCheck,
-  ArrowRight,
   Trash2,
-  Plus,
-  Minus,
+  CheckCircle,
   AlertTriangle,
-  X
+  X,
+  CreditCard,
+  Plus,
+  Minus
 } from 'lucide-react';
 
-function AppContent() {
+function MainApp() {
   const { user, isAuthenticated, isVendor, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState('catalog'); // 'catalog' | 'vendor-portal' | 'admin-portal' | 'cart' | 'orders'
+  const [activeTab, setActiveTab] = useState('catalog');
   const [searchQuery, setSearchQuery] = useState('');
-  const [cart, setCart] = useState([]);
-  const [authModal, setAuthModal] = useState({ isOpen: false, mode: 'login', role: 'customer' });
+
+  const [cart, setCart] = useState(() => {
+    const saved = localStorage.getItem('shopsphere_cart');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [chatDrawer, setChatDrawer] = useState({ isOpen: false, product: null });
+
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, productId: null, productTitle: '' });
+  const [showClearCartConfirm, setShowClearCartConfirm] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  const [removeItemConfirm, setRemoveItemConfirm] = useState({ isOpen: false, item: null });
-  const [clearCartConfirm, setClearCartConfirm] = useState(false);
+  useEffect(() => {
+    localStorage.setItem('shopsphere_cart', JSON.stringify(cart));
+  }, [cart]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -37,85 +49,73 @@ function AppContent() {
   };
 
   const handleAddToCart = (product) => {
-    setCart((prevCart) => {
-      const pId = product._id || product.id;
-      const existing = prevCart.find((item) => (item._id || item.id) === pId);
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product._id === product._id);
       if (existing) {
-        return prevCart.map((item) =>
-          (item._id || item.id) === pId ? { ...item, qty: item.qty + 1 } : item
+        return prev.map((item) =>
+          item.product._id === product._id ? { ...item, qty: item.qty + 1 } : item
         );
       }
-      return [...prevCart, { ...product, qty: 1 }];
+      return [...prev, { product, qty: 1 }];
     });
     showToast(`Added "${product.title}" to cart!`);
   };
 
-  const handleIncreaseQty = (item) => {
-    const pId = item._id || item.id;
-    setCart((prevCart) =>
-      prevCart.map((cartItem) =>
-        (cartItem._id || cartItem.id) === pId
-          ? { ...cartItem, qty: (cartItem.qty || 1) + 1 }
-          : cartItem
+  const handleIncrement = (productId) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.product._id === productId ? { ...item, qty: item.qty + 1 } : item
       )
     );
   };
 
-  const handleDecreaseQty = (item) => {
-    const currentQty = item.qty || 1;
-    if (currentQty <= 1) {
-      setRemoveItemConfirm({ isOpen: true, item });
-    } else {
-      const pId = item._id || item.id;
-      setCart((prevCart) =>
-        prevCart.map((cartItem) =>
-          (cartItem._id || cartItem.id) === pId
-            ? { ...cartItem, qty: currentQty - 1 }
-            : cartItem
+  const handleDecrement = (item) => {
+    if (item.qty > 1) {
+      setCart((prev) =>
+        prev.map((i) =>
+          i.product._id === item.product._id ? { ...i, qty: i.qty - 1 } : i
         )
       );
+    } else {
+      setDeleteConfirm({
+        isOpen: true,
+        productId: item.product._id,
+        productTitle: item.product.title,
+      });
     }
   };
 
-  const confirmRemoveItem = () => {
-    if (removeItemConfirm.item) {
-      const pId = removeItemConfirm.item._id || removeItemConfirm.item.id;
-      setCart((prevCart) => prevCart.filter((item) => (item._id || item.id) !== pId));
-      showToast(`Removed "${removeItemConfirm.item.title}" from cart`);
+  const confirmDeleteItem = () => {
+    if (deleteConfirm.productId) {
+      setCart((prev) => prev.filter((i) => i.product._id !== deleteConfirm.productId));
+      showToast('Item removed from cart');
     }
-    setRemoveItemConfirm({ isOpen: false, item: null });
+    setDeleteConfirm({ isOpen: false, productId: null, productTitle: '' });
   };
 
   const confirmClearCart = () => {
     setCart([]);
-    setClearCartConfirm(false);
-    showToast('Shopping cart cleared');
+    setShowClearCartConfirm(false);
+    showToast('Cart emptied');
   };
 
-  const handleOpenCheckout = () => {
+  const handleOpenChat = (product) => {
     if (!isAuthenticated) {
-      setAuthModal({ isOpen: true, mode: 'login', role: 'customer' });
+      setAuthMode('login');
+      setIsAuthOpen(true);
       return;
     }
-    setIsCheckoutOpen(true);
+    setChatDrawer({ isOpen: true, product });
   };
 
-  const handleOrderSuccess = (order) => {
-    setCart([]);
-    showToast('🎉 Payment Verified! Multi-vendor order placed!');
-    setTimeout(() => {
-      setIsCheckoutOpen(false);
-      setActiveTab('orders');
-    }, 1500);
-  };
-
-  const openAuthModal = (mode = 'login', role = 'customer') => {
-    setAuthModal({ isOpen: true, mode, role });
-  };
+  const totalCartCount = cart.reduce((sum, item) => sum + item.qty, 0);
+  const cartTotalAmount = cart.reduce((sum, item) => {
+    const price = item.product.discountPrice > 0 ? item.product.discountPrice : item.product.price;
+    return sum + price * item.qty;
+  }, 0);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Toast Alert */}
+  <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 border border-slate-700">
           <CheckCircle size={16} className="text-emerald-400 shrink-0" />
@@ -129,148 +129,122 @@ function AppContent() {
         setActiveTab={setActiveTab}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        cartCount={cart.reduce((sum, item) => sum + (item.qty || 1), 0)}
-        openAuthModal={openAuthModal}
+        cartCount={totalCartCount}
+        onOpenChatDrawer={() => setChatDrawer({ isOpen: true, product: null })}
+        openAuthModal={(mode) => {
+          setAuthMode(mode);
+          setIsAuthOpen(true);
+        }}
       />
 
-      {/* Main Content Area */}
+      {/* Main View Router */}
       <main className="flex-1">
         {activeTab === 'catalog' && (
           <ProductGrid
             searchQuery={searchQuery}
             onAddToCart={handleAddToCart}
-            onOpenChat={(p) => showToast(`💬 Live Chat with "${p.vendor?.storeName || 'Seller'}" activates in Day 3!`)}
-            onSelectProduct={(p) => showToast(`Selected: ${p.title}`)}
+            onOpenChat={handleOpenChat}
+            onSelectProduct={(p) => handleOpenChat(p)}
           />
         )}
 
-        {activeTab === 'orders' && <CustomerOrders />}
+        {activeTab === 'orders' && (
+          <CustomerOrders />
+        )}
 
         {activeTab === 'vendor-portal' && (
-          isVendor ? (
-            <VendorDashboard />
-          ) : (
-            <div className="max-w-md mx-auto my-12 px-4">
-              <div className="bg-white p-8 rounded-3xl border border-slate-200 text-center shadow-sm">
-                <Store size={48} className="mx-auto text-indigo-600 mb-3" />
-                <h2 className="text-xl font-bold text-slate-800 mb-2">Merchant Registration</h2>
-                <p className="text-xs text-slate-500 mb-6">
-                  You are currently browsing as {user ? user.role : 'Guest'}. Switch to a Vendor account or sign up to access your merchant portal.
-                </p>
-                <button
-                  onClick={() => openAuthModal('register', 'vendor')}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-3 rounded-xl shadow-sm transition"
-                >
-                  Register as Merchant
-                </button>
-              </div>
-            </div>
-          )
+          <VendorDashboard
+            onOpenAdminChat={(convo) => {
+              setChatDrawer({ isOpen: true, product: null });
+            }}
+          />
         )}
 
         {activeTab === 'admin-portal' && (
-          <div className="max-w-4xl mx-auto my-8 px-4">
-            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-3 pb-6 border-b border-slate-100">
-                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold shrink-0">
-                  <ShieldCheck size={26} />
-                </div>
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Super Admin Command Center</h1>
-                  <p className="text-xs text-slate-500">Platform-wide overview, SaaS metrics & vendor KYC approvals.</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-6">
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <span className="text-xs font-semibold text-slate-500 uppercase">Gross Merchandise Value</span>
-                  <h3 className="text-2xl font-black text-slate-900 mt-1">₹1,50,000</h3>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <span className="text-xs font-semibold text-slate-500 uppercase">Platform Commissions</span>
-                  <h3 className="text-2xl font-black text-emerald-600 mt-1">₹11,400</h3>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <span className="text-xs font-semibold text-slate-500 uppercase">Active Subscribed Vendors</span>
-                  <h3 className="text-2xl font-black text-indigo-600 mt-1">2 Merchants</h3>
-                </div>
-              </div>
-            </div>
-          </div>
+          <AdminPortal
+            onOpenVendorChat={(convo) => {
+              setChatDrawer({ isOpen: true, product: null });
+            }}
+          />
         )}
 
+        {/* 🛒 Cart View */}
         {activeTab === 'cart' && (
-          <div className="max-w-4xl mx-auto px-4 py-8">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
-                <ShoppingBag size={22} className="text-indigo-600" />
-                <span>Multi-Vendor Cart ({cart.reduce((s, i) => s + (i.qty || 1), 0)} items)</span>
+          <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+                <ShoppingBag size={24} className="text-indigo-600" />
+                <span>Your Shopping Cart ({totalCartCount} items)</span>
               </h1>
+
               {cart.length > 0 && (
                 <button
-                  onClick={() => setClearCartConfirm(true)}
-                  className="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 px-3 py-1.5 hover:bg-rose-50 rounded-xl transition border border-rose-100"
+                  onClick={() => setShowClearCartConfirm(true)}
+                  className="text-xs text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200 transition"
                 >
-                  <Trash2 size={13} /> <span>Clear Cart</span>
+                  <Trash2 size={14} /> Clear Cart
                 </button>
               )}
             </div>
 
             {cart.length > 0 ? (
-              <div className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm">
-                <div className="divide-y divide-slate-100">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2 space-y-3">
                   {cart.map((item) => {
-                    const itemTotal = (item.discountPrice || item.price) * (item.qty || 1);
+                    const price = item.product.discountPrice > 0 ? item.product.discountPrice : item.product.price;
+                    const itemImg = item.product.images?.[0]?.url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200';
                     return (
-                      <div key={item._id || item.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-3 sm:gap-4">
+                      <div
+                        key={item.product._id}
+                        className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center justify-between gap-4 shadow-xs"
+                      >
+                        <div className="flex items-center gap-3">
                           <img
-                            src={item.images?.[0]?.url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200'}
-                            alt={item.title}
-                            className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shrink-0"
+                            src={itemImg}
+                            alt={item.product.title}
+                            onError={(e) => {
+                              e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200';
+                            }}
+                            className="w-16 h-16 rounded-xl object-cover border border-slate-100 shrink-0"
                           />
                           <div>
-                            <h4 className="font-bold text-slate-800 text-sm leading-snug line-clamp-1">{item.title}</h4>
-                            <span className="text-xs text-indigo-600 font-semibold flex items-center gap-1 mt-0.5">
-                              <Store size={12} /> Sold by: {item.vendor?.storeName || 'Verified Merchant'}
+                            <h4 className="font-bold text-xs sm:text-sm text-slate-900 line-clamp-1">
+                              {item.product.title}
+                            </h4>
+                            <span className="text-[11px] text-indigo-600 font-semibold block">
+                              Store: {item.product.vendor?.storeName || 'Verified Merchant'}
                             </span>
-                            <span className="text-xs font-bold text-slate-900 block mt-1">
-                              ₹{(item.discountPrice || item.price).toLocaleString('en-IN')} each
+                            <span className="text-xs font-black text-slate-900 block mt-1">
+                              ₹{price.toLocaleString('en-IN')}
                             </span>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 pl-20 sm:pl-0">
+                        <div className="flex items-center gap-2">
                           <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50 p-1">
                             <button
-                              type="button"
-                              onClick={() => handleDecreaseQty(item)}
-                              className="p-1 rounded-lg hover:bg-white text-slate-600 hover:text-rose-600 transition shadow-sm"
+                              onClick={() => handleDecrement(item)}
+                              className="p-1 text-slate-600 hover:text-indigo-600 hover:bg-white rounded-lg transition"
                             >
                               <Minus size={14} />
                             </button>
-                            <span className="text-xs font-extrabold px-3 text-slate-800 min-w-[24px] text-center">
-                              {item.qty || 1}
-                            </span>
+                            <span className="px-2.5 text-xs font-bold text-slate-800">{item.qty}</span>
                             <button
-                              type="button"
-                              onClick={() => handleIncreaseQty(item)}
-                              className="p-1 rounded-lg hover:bg-white text-slate-600 hover:text-indigo-600 transition shadow-sm"
+                              onClick={() => handleIncrement(item.product._id)}
+                              className="p-1 text-slate-600 hover:text-indigo-600 hover:bg-white rounded-lg transition"
                             >
                               <Plus size={14} />
                             </button>
                           </div>
 
-                          <div className="text-right min-w-[75px]">
-                            <span className="font-black text-sm text-slate-900">
-                              ₹{itemTotal.toLocaleString('en-IN')}
-                            </span>
-                          </div>
-
                           <button
-                            type="button"
-                            onClick={() => setRemoveItemConfirm({ isOpen: true, item })}
-                            title="Remove from Cart"
+                            onClick={() =>
+                              setDeleteConfirm({
+                                isOpen: true,
+                                productId: item.product._id,
+                                productTitle: item.product.title,
+                              })
+                            }
                             className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition"
                           >
                             <Trash2 size={16} />
@@ -281,32 +255,52 @@ function AppContent() {
                   })}
                 </div>
 
-                <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4">
-                  <div>
-                    <span className="text-xs text-slate-500 font-medium">Subtotal ({cart.reduce((s, i) => s + (i.qty || 1), 0)} items)</span>
-                    <h3 className="text-2xl font-black text-slate-900">
-                      ₹{cart.reduce((sum, item) => sum + (item.discountPrice || item.price) * (item.qty || 1), 0).toLocaleString('en-IN')}
-                    </h3>
+                <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm h-fit space-y-4">
+                  <h3 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-3">
+                    Order Summary
+                  </h3>
+
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between text-slate-600">
+                      <span>Items Subtotal</span>
+                      <span>₹{cartTotalAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>Shipping / Courier</span>
+                      <span className="text-emerald-600 font-bold">FREE</span>
+                    </div>
+                    <div className="border-t border-slate-100 pt-2 flex justify-between font-black text-sm text-slate-900">
+                      <span>Total Amount</span>
+                      <span className="text-indigo-600">₹{cartTotalAmount.toLocaleString('en-IN')}</span>
+                    </div>
                   </div>
+
                   <button
-                    onClick={handleOpenCheckout}
-                    className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-3.5 rounded-2xl shadow-md shadow-indigo-200 transition"
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        setAuthMode('login');
+                        setIsAuthOpen(true);
+                        return;
+                      }
+                      setIsCheckoutOpen(true);
+                    }}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 rounded-xl shadow-md shadow-indigo-200 transition flex items-center justify-center gap-2"
                   >
+                    <CreditCard size={16} />
                     <span>Proceed to Stripe Checkout</span>
-                    <ArrowRight size={16} />
                   </button>
                 </div>
               </div>
             ) : (
               <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm">
                 <ShoppingBag size={48} className="mx-auto text-slate-300 mb-3" />
-                <h3 className="text-lg font-bold text-slate-800">Your cart is empty</h3>
-                <p className="text-xs text-slate-400 mt-1 mb-4">Add products from multiple vendors across the marketplace.</p>
+                <h3 className="text-base font-bold text-slate-800">Your shopping cart is empty</h3>
+                <p className="text-xs text-slate-400 mt-1 mb-4">Explore our multi-vendor marketplace and discover great products.</p>
                 <button
                   onClick={() => setActiveTab('catalog')}
-                  className="bg-indigo-600 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-sm"
+                  className="bg-indigo-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-indigo-200 transition"
                 >
-                  Explore Marketplace
+                  Browse Products
                 </button>
               </div>
             )}
@@ -314,34 +308,65 @@ function AppContent() {
         )}
       </main>
 
-      {/* 💳 Stripe Checkout Modal */}
-      <CheckoutModal
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        cart={cart}
-        user={user}
-        onOrderSuccess={handleOrderSuccess}
+      {/* 💬 Live Messenger Drawer */}
+      <ChatDrawer
+        isOpen={chatDrawer.isOpen}
+        onClose={() => setChatDrawer({ isOpen: false, product: null })}
+        targetProduct={chatDrawer.product}
       />
 
-      {/* Confirmation Modals */}
-      {removeItemConfirm.isOpen && (
+      {/* 🤖 24/7 AI Smart Assistant */}
+      <AiChatbot />
+
+      {/* 💳 Stripe Checkout Modal */}
+      {isCheckoutOpen && (
+        <CheckoutModal
+          isOpen={isCheckoutOpen}
+          onClose={() => setIsCheckoutOpen(false)}
+          cartItems={cart}
+          onOrderSuccess={() => {
+            setCart([]);
+            setActiveTab('orders');
+            showToast('Order Placed Successfully via Stripe!');
+          }}
+        />
+      )}
+
+      {/* 🔑 Auth Modal */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        initialMode={authMode}
+      />
+
+      {/* 🗑️ Deletion Confirmation Modals */}
+      {deleteConfirm.isOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center relative">
-            <button onClick={() => setRemoveItemConfirm({ isOpen: false, item: null })} className="absolute top-4 right-4 text-slate-400">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center relative font-['Plus_Jakarta_Sans',sans-serif]">
+            <button
+              onClick={() => setDeleteConfirm({ isOpen: false, productId: null, productTitle: '' })}
+              className="absolute top-4 right-4 text-slate-400 p-1"
+            >
               <X size={18} />
             </button>
-            <div className="w-13 h-13 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-3.5 p-3">
-              <AlertTriangle size={26} />
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <Trash2 size={24} />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">Remove from Cart?</h3>
+            <h3 className="text-base font-bold text-slate-900 mb-1">Remove Cart Item?</h3>
             <p className="text-xs text-slate-500 mb-5">
-              Are you sure you want to remove <strong>"{removeItemConfirm.item?.title}"</strong>?
+              Are you sure you want to remove <strong>"{deleteConfirm.productTitle}"</strong> from your cart?
             </p>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button onClick={() => setRemoveItemConfirm({ isOpen: false, item: null })} className="py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100">
-                Keep Item
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setDeleteConfirm({ isOpen: false, productId: null, productTitle: '' })}
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200"
+              >
+                Cancel
               </button>
-              <button onClick={confirmRemoveItem} className="py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 shadow-md">
+              <button
+                onClick={confirmDeleteItem}
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-200"
+              >
                 Yes, Remove
               </button>
             </div>
@@ -349,35 +374,39 @@ function AppContent() {
         </div>
       )}
 
-      {clearCartConfirm && (
+      {showClearCartConfirm && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center relative">
-            <button onClick={() => setClearCartConfirm(false)} className="absolute top-4 right-4 text-slate-400">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center relative font-['Plus_Jakarta_Sans',sans-serif]">
+            <button
+              onClick={() => setShowClearCartConfirm(false)}
+              className="absolute top-4 right-4 text-slate-400 p-1"
+            >
               <X size={18} />
             </button>
-            <div className="w-13 h-13 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-3.5 p-3">
-              <Trash2 size={26} />
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <AlertTriangle size={24} />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">Clear Cart?</h3>
-            <p className="text-xs text-slate-500 mb-5">Are you sure you want to remove all items from your cart?</p>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button onClick={() => setClearCartConfirm(false)} className="py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100">
+            <h3 className="text-base font-bold text-slate-900 mb-1">Clear Shopping Cart?</h3>
+            <p className="text-xs text-slate-500 mb-5">
+              This will remove all items from your current cart.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setShowClearCartConfirm(false)}
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200"
+              >
                 Cancel
               </button>
-              <button onClick={confirmClearCart} className="py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 shadow-md">
-                Clear All
+              <button
+                onClick={confirmClearCart}
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-200"
+              >
+                Yes, Clear All
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <AuthModal
-        isOpen={authModal.isOpen}
-        onClose={() => setAuthModal({ ...authModal, isOpen: false })}
-        initialMode={authModal.mode}
-        initialRole={authModal.role}
-      />
     </div>
   );
 }
@@ -385,7 +414,7 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <MainApp />
     </AuthProvider>
   );
 }

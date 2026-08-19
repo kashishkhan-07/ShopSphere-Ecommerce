@@ -11,10 +11,11 @@ import {
   Truck,
   CheckCircle,
   Clock,
-  Crown
+  Crown,
+  MessageCircle
 } from 'lucide-react';
 
-export default function VendorDashboard() {
+export default function VendorDashboard({ onOpenAdminChat }) {
   const { vendor, user } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState('inventory');
   const [products, setProducts] = useState([]);
@@ -43,7 +44,6 @@ export default function VendorDashboard() {
     setTimeout(() => setToastMessage(''), 3000);
   };
 
-  // 🎨 Smart Category-based HD Fallback Image Selector
   const getProductImage = (product) => {
     const rawUrl = product.images?.[0]?.url;
     if (rawUrl && rawUrl.startsWith('http') && !rawUrl.includes('shopspheredemo')) {
@@ -86,7 +86,6 @@ export default function VendorDashboard() {
   const handleAddProduct = async (e) => {
     e.preventDefault();
     try {
-      // Auto-assign HD category image if empty
       let finalImg = formData.imageUrl;
       if (!finalImg) {
         switch (formData.category) {
@@ -208,6 +207,22 @@ export default function VendorDashboard() {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* 🎧 1-Click Contact Admin Desk */}
+          <button
+            onClick={async () => {
+              try {
+                const { data } = await api.post('/chat/conversations', { type: 'vendor_admin' });
+                if (onOpenAdminChat) onOpenAdminChat(data.conversation);
+              } catch (err) {
+                alert('Could not connect to Admin Desk');
+              }
+            }}
+            className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-indigo-300 font-bold text-xs px-3.5 py-3 rounded-xl shadow-xs transition cursor-pointer"
+          >
+            <MessageCircle size={15} className="text-indigo-400" />
+            <span>🎧 Contact Admin Desk</span>
+          </button>
+
           <button
             onClick={() => setShowUpgradeModal(true)}
             className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-md shadow-amber-200 transition"

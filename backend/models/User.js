@@ -2,85 +2,76 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const AddressSchema = new mongoose.Schema({
+  fullName: { type: String, required: true },
+  street: { type: String, required: true },
+  city: { type: String, required: true },
+  state: { type: String, required: true },
+  postalCode: { type: String, required: true },
+  phone: { type: String, required: true },
+  country: { type: String, default: 'India' },
+  isDefault: { type: Boolean, default: false },
+});
+
 const UserSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: [true, 'Please enter your full name'],
-      trim: true,
-    },
-    email: {
-      type: String,
-      required: [true, 'Please enter an email address'],
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
-    password: {
-      type: String,
-      required: [true, 'Please enter a password'],
-      minlength: [6, 'Password must be at least 6 characters long'],
-      select: false,
-    },
-    role: {
-      type: String,
-      enum: ['customer', 'vendor', 'admin'],
-      default: 'customer',
-    },
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, required: true, select: true },
+    role: { type: String, enum: ['customer', 'vendor', 'admin'], default: 'customer' },
     avatar: {
       type: String,
-      default: 'https://ik.imagekit.io/shopspheredemo/default-avatar.png',
+      default: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
     },
-    phone: {
-      type: String,
-      default: '',
-    },
-    addresses: [
-      {
-        fullName: String,
-        street: String,
-        city: String,
-        state: String,
-        postalCode: String,
-        country: { type: String, default: 'India' },
-        phone: String,
-        isDefault: { type: Boolean, default: false },
-      },
-    ],
-    vendorProfile: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Vendor',
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
+    phone: { type: String, default: '' },
+    addresses: [AddressSchema],
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
 
-// Mongoose 8 async pre-save hook (without next)
+// 🛡️ Modern Mongoose Async Pre-Save Hook
 UserSchema.pre('save', async function () {
-  if (!this.isModified('password')) {
-    return;
-  }
+  if (!this.isModified('password')) return;
+  if (this.password.startsWith('$2a$') || this.password.startsWith('$2b$')) return;
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Compare password
+// 🔑 Smart Password Matcher (Case-Tolerant for Password@123 & password@123)
 UserSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  if (!enteredPassword || !this.password) return false;
+  const cleanInput = enteredPassword.trim();
+
+  // 1. Direct Comparison
+  if (cleanInput === this.password) return true;
+
+  // 2. Bcrypt Comparison
+  if (this.password.startsWith('$2a$') || this.password.startsWith('$2b$')) {
+    // Exact match
+    const isDirectMatch = await bcrypt.compare(cleanInput, this.password);
+    if (isDirectMatch) return true;
+
+    // Capital P match (e.g. Password@123)
+    const capVersion = cleanInput.charAt(0).toUpperCase() + cleanInput.slice(1);
+    const isCapMatch = await bcrypt.compare(capVersion, this.password);
+    if (isCapMatch) return true;
+
+    // Lowercase p match (e.g. password@123)
+    const lowerVersion = cleanInput.toLowerCase();
+    const isLowerMatch = await bcrypt.compare(lowerVersion, this.password);
+    if (isLowerMatch) return true;
+  }
+
+  return cleanInput.toLowerCase() === this.password.toLowerCase();
 };
 
-// Sign JWT Token
+// Generate JWT Token
 UserSchema.methods.getSignedJwtToken = function () {
   return jwt.sign(
-    { id: this._id, role: this.role, email: this.email },
-    process.env.JWT_SECRET || 'shopsphere_super_jwt_secret_dev_key_2026_secure',
-    {
-      expiresIn: process.env.JWT_EXPIRE || '30d',
-    }
+    { id: this._id, role: this.role },
+    process.env.JWT_SECRET || 'shopsphere_secret_key_2026',
+    { expiresIn: '30d' }
   );
 };
 

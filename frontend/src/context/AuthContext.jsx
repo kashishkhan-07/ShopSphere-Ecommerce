@@ -4,84 +4,68 @@ import api from '../services/api';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [vendor, setVendor] = useState(null);
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('shopsphere_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [vendor, setVendor] = useState(() => {
+    const saved = localStorage.getItem('shopsphere_vendor');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [loading, setLoading] = useState(true);
 
-  // Load user session on app start
   useEffect(() => {
-    const loadUser = async () => {
-      const token = localStorage.getItem('shopsphere_token');
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const res = await api.get('/auth/me');
-        if (res.data.success) {
-          setUser(res.data.user);
-          setVendor(res.data.vendor);
-        }
-      } catch (err) {
-        localStorage.removeItem('shopsphere_token');
-        setUser(null);
-        setVendor(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUser();
+    fetchMe();
   }, []);
 
-  const login = async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
-    if (res.data.success) {
-      localStorage.setItem('shopsphere_token', res.data.token);
-      setUser(res.data.user);
-      setVendor(res.data.vendor);
-      return res.data;
+  const fetchMe = async () => {
+    const token = localStorage.getItem('shopsphere_token');
+    if (!token) {
+      setLoading(false);
+      return;
     }
-  };
-
-  const register = async (userData) => {
-    const res = await api.post('/auth/register', userData);
-    if (res.data.success) {
-      localStorage.setItem('shopsphere_token', res.data.token);
-      setUser(res.data.user);
-      setVendor(res.data.vendor);
-      return res.data;
-    }
-  };
-
-  // 1-Click Demo Account Switcher
-  const demoLogin = async (role) => {
-    setLoading(true);
     try {
-      const res = await api.post('/auth/demo-login', { role });
-      if (res.data.success) {
-        localStorage.setItem('shopsphere_token', res.data.token);
-        setUser(res.data.user);
-        setVendor(res.data.vendor);
-      }
+      const { data } = await api.get('/auth/me');
+      setUser(data.user);
+      if (data.vendor) setVendor(data.vendor);
+      localStorage.setItem('shopsphere_user', JSON.stringify(data.user));
     } catch (err) {
-      console.error('Demo login error:', err);
+      logout();
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = async () => {
-    try {
-      await api.get('/auth/logout');
-    } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
-      localStorage.removeItem('shopsphere_token');
-      setUser(null);
-      setVendor(null);
-    }
+  const login = async (email, password) => {
+    const { data } = await api.post('/auth/login', { email, password });
+    localStorage.setItem('shopsphere_token', data.token);
+    localStorage.setItem('shopsphere_user', JSON.stringify(data.user));
+    setUser(data.user);
+    await fetchMe();
+    return data;
+  };
+
+  const register = async (userData) => {
+    const { data } = await api.post('/auth/register', userData);
+    localStorage.setItem('shopsphere_token', data.token);
+    localStorage.setItem('shopsphere_user', JSON.stringify(data.user));
+    setUser(data.user);
+    await fetchMe();
+    return data;
+  };
+
+  // 🔄 Update Local & State User
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('shopsphere_user', JSON.stringify(updatedUser));
+  };
+
+  const logout = () => {
+    localStorage.removeItem('shopsphere_token');
+    localStorage.removeItem('shopsphere_user');
+    localStorage.removeItem('shopsphere_vendor');
+    setUser(null);
+    setVendor(null);
   };
 
   return (
@@ -90,14 +74,14 @@ export const AuthProvider = ({ children }) => {
         user,
         vendor,
         loading,
+        isAuthenticated: !!user,
+        isVendor: user?.role === 'vendor',
+        isAdmin: user?.role === 'admin',
         login,
         register,
-        demoLogin,
         logout,
-        isAuthenticated: !!user,
-        isAdmin: user?.role === 'admin',
-        isVendor: user?.role === 'vendor',
-        isCustomer: user?.role === 'customer',
+        updateUser,
+        fetchMe,
       }}
     >
       {children}

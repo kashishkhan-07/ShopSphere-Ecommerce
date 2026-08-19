@@ -1,22 +1,21 @@
 const express = require('express');
 const {
   createPaymentIntent,
-  confirmAndSplitOrder,
+  confirmPayment,
   getMyOrders,
   getVendorSubOrders,
   updateSubOrderStatus,
+  cancelOrder,
 } = require('../controllers/orderController');
-const { protect, authorize } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Customer checkout & orders
 router.post('/create-payment-intent', protect, createPaymentIntent);
-router.post('/confirm-and-split', protect, confirmAndSplitOrder);
+router.post('/:id/confirm-payment', protect, confirmPayment);
 router.get('/my-orders', protect, getMyOrders);
-
-// Vendor fulfillment
-router.get('/vendor-suborders', protect, authorize('vendor', 'admin'), getVendorSubOrders);
-router.patch('/suborders/:id/status', protect, authorize('vendor', 'admin'), updateSubOrderStatus);
+router.get('/vendor-suborders', protect, getVendorSubOrders);
+router.patch('/suborders/:id/status', protect, updateSubOrderStatus);
+router.patch('/:id/cancel', protect, cancelOrder);
 
 module.exports = router;
