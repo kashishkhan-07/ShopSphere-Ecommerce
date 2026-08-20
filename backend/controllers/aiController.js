@@ -20,7 +20,7 @@ exports.chatWithAI = async (req, res) => {
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       try {
         const token = req.headers.authorization.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'shopsphere_secret_key_2026');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret123');
         userId = decoded.id;
       } catch (e) {
         // Token invalid / guest
