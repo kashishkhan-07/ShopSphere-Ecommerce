@@ -1,89 +1,80 @@
-import React from 'react';
-import { Store, Star, ArrowRight, ShieldCheck } from 'lucide-react';
-
-const STORES = [
-  {
-    id: 1,
-    name: 'TechZone Hub',
-    logo: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=200',
-    rating: 4.9,
-    productsCount: 245,
-    category: 'Electronics & Audio',
-  },
-  {
-    id: 2,
-    name: 'Urban Nest',
-    logo: 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=200',
-    rating: 4.8,
-    productsCount: 199,
-    category: 'Home & Kitchenware',
-  },
-  {
-    id: 3,
-    name: 'Aura Beauty',
-    logo: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=200',
-    rating: 4.9,
-    productsCount: 156,
-    category: 'Skincare & Cosmetics',
-  },
-  {
-    id: 4,
-    name: 'StyleCrafts',
-    logo: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200',
-    rating: 4.7,
-    productsCount: 118,
-    category: 'Apparel & Accessories',
-  },
-];
+import React, { useState, useEffect } from 'react';
+import api from '../services/api';
+import { Store, Star, CheckCircle } from 'lucide-react';
 
 export default function FeaturedStores({ onSelectStore }) {
+  const [stores, setStores] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStores();
+  }, []);
+
+  const fetchStores = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/vendors');
+      const verifiedOnly = data.vendors?.filter((v) => v.isVerified || v.vendorStatus === 'approved') || [];
+      setStores(verifiedOnly);
+    } catch (err) {
+      console.error('Fetch featured stores error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-4 font-['Plus_Jakarta_Sans',sans-serif]">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
             <Store size={20} className="text-[#063F35]" />
-            <span>Featured Stores</span>
+            <span>Featured Merchant Stores</span>
           </h2>
-          <p className="text-xs text-slate-500">Discover top verified sellers & brand storefronts</p>
+          <p className="text-xs text-slate-500">Explore top-rated verified brand storefronts</p>
         </div>
-        <button
-          onClick={onSelectStore}
-          className="text-xs font-bold text-[#063F35] hover:underline flex items-center gap-1 cursor-pointer"
-        >
-          <span>View All Stores</span>
-          <ArrowRight size={14} />
-        </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        {STORES.map((store) => (
-          <div
-            key={store.id}
-            onClick={onSelectStore}
-            className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs hover:shadow-md transition-all cursor-pointer flex items-center gap-3 group"
-          >
-            <img
-              src={store.logo}
-              alt={store.name}
-              className="w-12 h-12 rounded-xl object-cover border border-slate-100 group-hover:scale-105 transition"
-            />
-            <div className="min-w-0 flex-1">
-              <h4 className="font-bold text-xs text-slate-900 truncate flex items-center gap-1">
-                <span>{store.name}</span>
-                <ShieldCheck size={12} className="text-emerald-600 shrink-0" />
-              </h4>
-              <p className="text-[10px] text-slate-400 truncate">{store.category}</p>
-              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600 mt-1">
-                <span className="flex items-center gap-0.5 text-amber-500">
-                  <Star size={11} className="fill-amber-400" /> {store.rating}
+      {loading ? (
+        <div className="p-8 text-center text-slate-400 text-xs">Loading verified stores...</div>
+      ) : stores.length > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+          {stores.map((store) => (
+            <div
+              key={store._id}
+              onClick={() => onSelectStore(store.storeName)}
+              className="bg-white rounded-2xl border border-slate-200/80 p-4 hover:shadow-md transition duration-300 cursor-pointer flex flex-col items-center text-center space-y-2 group"
+            >
+              <div className="relative">
+                <img
+                  src={store.logo || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=200'}
+                  alt={store.storeName}
+                  className="w-14 h-14 rounded-2xl object-cover border border-slate-200 group-hover:scale-105 transition"
+                />
+                <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-0.5 rounded-full">
+                  <CheckCircle size={10} />
                 </span>
-                <span>• {store.productsCount} Products</span>
+              </div>
+
+              <div className="w-full">
+                <h4 className="font-black text-xs text-slate-900 truncate group-hover:text-[#063F35] transition">
+                  {store.storeName}
+                </h4>
+                <span className="text-[10px] text-slate-400 block truncate mt-0.5">
+                  {store.description || 'Verified Seller'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 text-[10px] font-bold text-slate-700 flex items-center gap-1">
+                <Star size={11} className="text-amber-500 fill-amber-400" />
+                <span>4.9 Rating</span>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="p-6 text-center text-slate-400 text-xs">No verified stores listed.</div>
+      )}
     </div>
   );
 }

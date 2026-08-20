@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import HeroSection from './HeroSection';
 import FeaturedStores from './FeaturedStores';
 import DealsOfTheDay from './DealsOfTheDay';
@@ -10,7 +11,8 @@ import {
   Heart,
   ShieldCheck,
   Check,
-  Package
+  Package,
+  X
 } from 'lucide-react';
 
 export default function ProductGrid({
@@ -22,9 +24,11 @@ export default function ProductGrid({
   onOpenChat,
   setActiveTab
 }) {
+  const { isVendor, isAdmin } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [addedIds, setAddedIds] = useState([]);
+  const [selectedStoreFilter, setSelectedStoreFilter] = useState('');
 
   useEffect(() => {
     fetchProducts();
@@ -64,11 +68,18 @@ export default function ProductGrid({
     }
   };
 
-  const filteredProducts = products.filter((p) =>
-    p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.vendor?.storeName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = products.filter((p) => {
+    const matchesSearch =
+      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.vendor?.storeName?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesStore = selectedStoreFilter
+      ? p.vendor?.storeName?.toLowerCase() === selectedStoreFilter.toLowerCase()
+      : true;
+
+    return matchesSearch && matchesStore;
+  });
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8 font-['Plus_Jakarta_Sans',sans-serif]">
@@ -82,19 +93,33 @@ export default function ProductGrid({
       {/* Deals of the Day */}
       <DealsOfTheDay onShopNow={() => {}} />
 
-      {/* Featured Stores */}
-      <FeaturedStores onSelectStore={() => setActiveTab?.('vendor-portal')} />
+      {/* Dynamic Featured Stores */}
+      <FeaturedStores onSelectStore={(storeName) => setSelectedStoreFilter(storeName)} />
 
       {/* Trending Products Grid */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <Package size={20} className="text-[#063F35]" />
-              <span>Trending Products</span>
-            </h2>
-            <p className="text-xs text-slate-500">Quality verified products from merchants across India</p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Package size={20} className="text-[#063F35]" />
+                <span>
+                  {selectedStoreFilter ? `Products from "${selectedStoreFilter}"` : 'Trending Products'}
+                </span>
+              </h2>
+              <p className="text-xs text-slate-500">Quality verified products from merchants across India</p>
+            </div>
+
+            {selectedStoreFilter && (
+              <button
+                onClick={() => setSelectedStoreFilter('')}
+                className="bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold px-3 py-1 rounded-xl flex items-center gap-1 cursor-pointer hover:bg-rose-100 transition"
+              >
+                <X size={13} /> Clear Store Filter
+              </button>
+            )}
           </div>
+
           <span className="text-xs font-bold text-[#063F35] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
             {filteredProducts.length} Products Found
           </span>
@@ -132,15 +157,17 @@ export default function ProductGrid({
                       </span>
                     )}
 
-                    {/* ❤️ Wishlist Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => handleWishlistClick(e, product)}
-                      className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 backdrop-blur-md text-slate-600 hover:text-rose-500 transition cursor-pointer shadow-xs z-10"
-                      title={isWished ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                    >
-                      <Heart size={15} className={isWished ? 'fill-rose-500 text-rose-500' : ''} />
-                    </button>
+                    {/* ❤️ Wishlist Heart (CUSTOMERS & GUESTS ONLY - Hidden for Vendors/Admins) */}
+                    {!isVendor && !isAdmin && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleWishlistClick(e, product)}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 backdrop-blur-md text-slate-600 hover:text-rose-500 transition cursor-pointer shadow-xs z-10"
+                        title={isWished ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                      >
+                        <Heart size={15} className={isWished ? 'fill-rose-500 text-rose-500' : ''} />
+                      </button>
+                    )}
                   </div>
 
                   <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
@@ -175,32 +202,46 @@ export default function ProductGrid({
                       </div>
                     </div>
 
+                    {/* 🛒 Bottom Actions: Customers get Add to Cart; Vendors/Admins get Contact Seller */}
                     <div className="flex items-center gap-1.5 pt-1">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onOpenChat(product);
-                        }}
-                        title="Chat with seller"
-                        className="p-2 text-slate-500 hover:text-[#063F35] hover:bg-emerald-50 border border-slate-200 rounded-xl transition cursor-pointer"
-                      >
-                        <MessageCircle size={14} />
-                      </button>
+                      {!isVendor && !isAdmin ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onOpenChat(product);
+                            }}
+                            title="Chat with seller"
+                            className="p-2 text-slate-500 hover:text-[#063F35] hover:bg-emerald-50 border border-slate-200 rounded-xl transition cursor-pointer"
+                          >
+                            <MessageCircle size={14} />
+                          </button>
 
-                      <button
-                        type="button"
-                        onClick={(e) => handleAddClick(e, product)}
-                        className={`flex-1 text-[11px] font-bold py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1 ${
-                          isAdded
-                            ? 'bg-emerald-700 text-white'
-                            : 'bg-[#063F35] hover:bg-[#0B3D35] text-white shadow-xs'
-                        }`}
-                      >
-                        {isAdded ? <Check size={13} /> : <ShoppingBag size={13} />}
-                        <span>{isAdded ? 'Added' : 'Add'}</span>
-                      </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleAddClick(e, product)}
+                            className={`flex-1 text-[11px] font-bold py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1 ${
+                              isAdded
+                                ? 'bg-emerald-700 text-white'
+                                : 'bg-[#063F35] hover:bg-[#0B3D35] text-white shadow-xs'
+                            }`}
+                          >
+                            {isAdded ? <Check size={13} /> : <ShoppingBag size={13} />}
+                            <span>{isAdded ? 'Added' : 'Add'}</span>
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onOpenChat(product)}
+                          className="w-full bg-[#063F35] hover:bg-[#0B3D35] text-white text-[11px] font-bold py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                        >
+                          <MessageCircle size={14} />
+                          <span>Contact Seller</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

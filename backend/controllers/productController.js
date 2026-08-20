@@ -83,8 +83,69 @@ const createProduct = async (req, res) => {
   }
 };
 
+// @desc    Update Vendor Product (Vendor Only)
+// @route   PUT /api/products/:id
+// @access  Private (Vendor Only)
+const updateProduct = async (req, res) => {
+  try {
+    const vendor = await Vendor.findOne({ user: req.user.id });
+    let product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    if (product.vendor.toString() !== vendor._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized to edit this product' });
+    }
+
+    const { title, description, category, brand, price, discountPrice, stock, image } = req.body;
+    const updateData = {};
+    if (title) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (category) updateData.category = category;
+    if (brand) updateData.brand = brand;
+    if (price !== undefined) updateData.price = Number(price);
+    if (discountPrice !== undefined) updateData.discountPrice = Number(discountPrice);
+    if (stock !== undefined) updateData.stock = Number(stock);
+    if (image) updateData.images = [{ url: image }];
+
+    product = await Product.findByIdAndUpdate(req.params.id, { $set: updateData }, { new: true, runValidators: true });
+
+    return res.status(200).json({ success: true, message: 'Product updated successfully!', product });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Delete Vendor Product (Vendor Only)
+// @route   DELETE /api/products/:id
+// @access  Private (Vendor Only)
+const deleteProduct = async (req, res) => {
+  try {
+    const vendor = await Vendor.findOne({ user: req.user.id });
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    if (product.vendor.toString() !== vendor._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this product' });
+    }
+
+    await product.deleteOne();
+
+    return res.status(200).json({ success: true, message: 'Product deleted successfully!' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   getProducts,
   getMyProducts,
   createProduct,
+  updateProduct,
+  deleteProduct,
 };
