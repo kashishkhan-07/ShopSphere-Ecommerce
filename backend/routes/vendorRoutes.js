@@ -1,17 +1,9 @@
 const express = require('express');
-const {
-  getVendors,
-  getVendorBySlug,
-  getSubscriptionPlans,
-  upgradePlan,
-} = require('../controllers/vendorController');
-const { protect, authorize } = require('../middleware/auth');
-
 const router = express.Router();
+const { getVendorProfile, getAllVendors } = require('../controllers/vendorController');
+const { protect } = require('../middleware/auth');
 
-router.get('/', getVendors);
-router.get('/plans', getSubscriptionPlans);
-router.get('/:slug', getVendorBySlug);
-router.post('/upgrade-plan', protect, authorize('vendor', 'admin'), upgradePlan);
+router.get('/me', protect, getVendorProfile);
+router.get('/', getAllVendors);
 
 module.exports = router;

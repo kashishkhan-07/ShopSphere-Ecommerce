@@ -9,24 +9,22 @@ import AdminPortal from './components/AdminPortal';
 import ChatDrawer from './components/ChatDrawer';
 import AiChatbot from './components/AiChatbot';
 import AuthModal from './components/AuthModal';
-import {
-  ShoppingBag,
-  Trash2,
-  CheckCircle,
-  AlertTriangle,
-  X,
-  CreditCard,
-  Plus,
-  Minus
-} from 'lucide-react';
+import WishlistPage from './components/WishlistPage';
+import { ShoppingBag, Trash2, CheckCircle, AlertTriangle, X, CreditCard, Plus, Minus } from 'lucide-react';
 
 function MainApp() {
   const { user, isAuthenticated, isVendor, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('catalog');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
   const [cart, setCart] = useState(() => {
     const saved = localStorage.getItem('shopsphere_cart');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [wishlist, setWishlist] = useState(() => {
+    const saved = localStorage.getItem('shopsphere_wishlist');
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -34,14 +32,18 @@ function MainApp() {
   const [authMode, setAuthMode] = useState('login');
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [chatDrawer, setChatDrawer] = useState({ isOpen: false, product: null });
+  const [toastMessage, setToastMessage] = useState('');
 
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, productId: null, productTitle: '' });
   const [showClearCartConfirm, setShowClearCartConfirm] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     localStorage.setItem('shopsphere_cart', JSON.stringify(cart));
   }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem('shopsphere_wishlist', JSON.stringify(wishlist));
+  }, [wishlist]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -49,37 +51,61 @@ function MainApp() {
   };
 
   const handleAddToCart = (product) => {
+    if (!product) return;
+    const targetId = product._id || product.id;
+
     setCart((prev) => {
-      const existing = prev.find((item) => item.product._id === product._id);
+      const existing = prev.find((item) => (item.product._id || item.product.id) === targetId);
       if (existing) {
         return prev.map((item) =>
-          item.product._id === product._id ? { ...item, qty: item.qty + 1 } : item
+          (item.product._id || item.product.id) === targetId ? { ...item, qty: item.qty + 1 } : item
         );
       }
       return [...prev, { product, qty: 1 }];
     });
-    showToast(`Added "${product.title}" to cart!`);
+    showToast(`Added "${product.title}" to Cart! 🛒`);
+  };
+
+  const handleToggleWishlist = (product) => {
+    if (!product) return;
+    const targetId = product._id || product.id;
+
+    setWishlist((prev) => {
+      const exists = prev.some((p) => (p._id || p.id) === targetId);
+      if (exists) {
+        showToast(`Removed "${product.title}" from Wishlist`);
+        return prev.filter((p) => (p._id || p.id) !== targetId);
+      }
+      showToast(`Saved "${product.title}" to Wishlist ❤️`);
+      return [...prev, product];
+    });
+  };
+
+  const handleRemoveFromWishlist = (productId) => {
+    setWishlist((prev) => prev.filter((p) => (p._id || p.id) !== productId));
+    showToast('Item removed from wishlist');
   };
 
   const handleIncrement = (productId) => {
     setCart((prev) =>
       prev.map((item) =>
-        item.product._id === productId ? { ...item, qty: item.qty + 1 } : item
+        (item.product._id || item.product.id) === productId ? { ...item, qty: item.qty + 1 } : item
       )
     );
   };
 
   const handleDecrement = (item) => {
+    const pId = item.product._id || item.product.id;
     if (item.qty > 1) {
       setCart((prev) =>
         prev.map((i) =>
-          i.product._id === item.product._id ? { ...i, qty: i.qty - 1 } : i
+          (i.product._id || i.product.id) === pId ? { ...i, qty: i.qty - 1 } : i
         )
       );
     } else {
       setDeleteConfirm({
         isOpen: true,
-        productId: item.product._id,
+        productId: pId,
         productTitle: item.product.title,
       });
     }
@@ -87,7 +113,7 @@ function MainApp() {
 
   const confirmDeleteItem = () => {
     if (deleteConfirm.productId) {
-      setCart((prev) => prev.filter((i) => i.product._id !== deleteConfirm.productId));
+      setCart((prev) => prev.filter((i) => (i.product._id || i.product.id) !== deleteConfirm.productId));
       showToast('Item removed from cart');
     }
     setDeleteConfirm({ isOpen: false, productId: null, productTitle: '' });
@@ -99,15 +125,6 @@ function MainApp() {
     showToast('Cart emptied');
   };
 
-  const handleOpenChat = (product) => {
-    if (!isAuthenticated) {
-      setAuthMode('login');
-      setIsAuthOpen(true);
-      return;
-    }
-    setChatDrawer({ isOpen: true, product });
-  };
-
   const totalCartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotalAmount = cart.reduce((sum, item) => {
     const price = item.product.discountPrice > 0 ? item.product.discountPrice : item.product.price;
@@ -115,26 +132,28 @@ function MainApp() {
   }, 0);
 
   return (
-  <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="min-h-screen bg-[#F8F7F3] text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif] relative">
+
+      {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 border border-slate-700">
-          <CheckCircle size={16} className="text-emerald-400 shrink-0" />
+        <div className="fixed bottom-6 right-6 z-50 bg-[#063F35] text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 border border-[#C9A86A]">
+          <CheckCircle size={16} className="text-[#C9A86A]" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Top Navbar */}
+      {/* Header */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
         cartCount={totalCartCount}
+        wishlistCount={wishlist.length}
         onOpenChatDrawer={() => setChatDrawer({ isOpen: true, product: null })}
-        openAuthModal={(mode) => {
-          setAuthMode(mode);
-          setIsAuthOpen(true);
-        }}
+        openAuthModal={(mode) => { setAuthMode(mode); setIsAuthOpen(true); }}
       />
 
       {/* Main View Router */}
@@ -142,45 +161,47 @@ function MainApp() {
         {activeTab === 'catalog' && (
           <ProductGrid
             searchQuery={searchQuery}
+            selectedCategory={selectedCategory}
             onAddToCart={handleAddToCart}
-            onOpenChat={handleOpenChat}
-            onSelectProduct={(p) => handleOpenChat(p)}
+            onToggleWishlist={handleToggleWishlist}
+            wishlistItems={wishlist}
+            onOpenChat={(p) => setChatDrawer({ isOpen: true, product: p })}
+            setActiveTab={setActiveTab}
           />
         )}
 
-        {activeTab === 'orders' && (
-          <CustomerOrders />
+        {activeTab === 'wishlist' && (
+          <WishlistPage
+            wishlistItems={wishlist}
+            onAddToCart={handleAddToCart}
+            onRemoveFromWishlist={handleRemoveFromWishlist}
+            onContinueShopping={() => setActiveTab('catalog')}
+          />
         )}
+
+        {activeTab === 'orders' && <CustomerOrders />}
 
         {activeTab === 'vendor-portal' && (
-          <VendorDashboard
-            onOpenAdminChat={(convo) => {
-              setChatDrawer({ isOpen: true, product: null });
-            }}
-          />
+          <VendorDashboard onOpenAdminChat={() => setChatDrawer({ isOpen: true, product: null })} />
         )}
 
         {activeTab === 'admin-portal' && (
-          <AdminPortal
-            onOpenVendorChat={(convo) => {
-              setChatDrawer({ isOpen: true, product: null });
-            }}
-          />
+          <AdminPortal onOpenVendorChat={() => setChatDrawer({ isOpen: true, product: null })} />
         )}
 
-        {/* 🛒 Cart View */}
+        {/* Shopping Cart Page */}
         {activeTab === 'cart' && (
           <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
-                <ShoppingBag size={24} className="text-indigo-600" />
+                <ShoppingBag size={24} className="text-[#063F35]" />
                 <span>Your Shopping Cart ({totalCartCount} items)</span>
               </h1>
 
               {cart.length > 0 && (
                 <button
                   onClick={() => setShowClearCartConfirm(true)}
-                  className="text-xs text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200 transition"
+                  className="text-xs text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200 transition cursor-pointer"
                 >
                   <Trash2 size={14} /> Clear Cart
                 </button>
@@ -193,10 +214,11 @@ function MainApp() {
                   {cart.map((item) => {
                     const price = item.product.discountPrice > 0 ? item.product.discountPrice : item.product.price;
                     const itemImg = item.product.images?.[0]?.url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200';
+                    const pId = item.product._id || item.product.id;
                     return (
                       <div
-                        key={item.product._id}
-                        className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center justify-between gap-4 shadow-xs"
+                        key={pId}
+                        className="bg-white rounded-2xl border border-slate-200/80 p-4 flex items-center justify-between gap-4 shadow-2xs"
                       >
                         <div className="flex items-center gap-3">
                           <img
@@ -211,7 +233,7 @@ function MainApp() {
                             <h4 className="font-bold text-xs sm:text-sm text-slate-900 line-clamp-1">
                               {item.product.title}
                             </h4>
-                            <span className="text-[11px] text-indigo-600 font-semibold block">
+                            <span className="text-[11px] text-[#063F35] font-semibold block">
                               Store: {item.product.vendor?.storeName || 'Verified Merchant'}
                             </span>
                             <span className="text-xs font-black text-slate-900 block mt-1">
@@ -224,14 +246,14 @@ function MainApp() {
                           <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50 p-1">
                             <button
                               onClick={() => handleDecrement(item)}
-                              className="p-1 text-slate-600 hover:text-indigo-600 hover:bg-white rounded-lg transition"
+                              className="p-1 text-slate-600 hover:text-[#063F35] hover:bg-white rounded-lg transition cursor-pointer"
                             >
                               <Minus size={14} />
                             </button>
                             <span className="px-2.5 text-xs font-bold text-slate-800">{item.qty}</span>
                             <button
-                              onClick={() => handleIncrement(item.product._id)}
-                              className="p-1 text-slate-600 hover:text-indigo-600 hover:bg-white rounded-lg transition"
+                              onClick={() => handleIncrement(pId)}
+                              className="p-1 text-slate-600 hover:text-[#063F35] hover:bg-white rounded-lg transition cursor-pointer"
                             >
                               <Plus size={14} />
                             </button>
@@ -241,11 +263,11 @@ function MainApp() {
                             onClick={() =>
                               setDeleteConfirm({
                                 isOpen: true,
-                                productId: item.product._id,
+                                productId: pId,
                                 productTitle: item.product.title,
                               })
                             }
-                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition"
+                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -255,7 +277,7 @@ function MainApp() {
                   })}
                 </div>
 
-                <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm h-fit space-y-4">
+                <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm h-fit space-y-4">
                   <h3 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-3">
                     Order Summary
                   </h3>
@@ -271,7 +293,7 @@ function MainApp() {
                     </div>
                     <div className="border-t border-slate-100 pt-2 flex justify-between font-black text-sm text-slate-900">
                       <span>Total Amount</span>
-                      <span className="text-indigo-600">₹{cartTotalAmount.toLocaleString('en-IN')}</span>
+                      <span className="text-[#063F35]">₹{cartTotalAmount.toLocaleString('en-IN')}</span>
                     </div>
                   </div>
 
@@ -284,7 +306,7 @@ function MainApp() {
                       }
                       setIsCheckoutOpen(true);
                     }}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 rounded-xl shadow-md shadow-indigo-200 transition flex items-center justify-center gap-2"
+                    className="w-full bg-[#063F35] hover:bg-[#0B3D35] text-white font-bold text-xs py-3.5 rounded-xl shadow-md shadow-[#063F35]/20 transition flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <CreditCard size={16} />
                     <span>Proceed to Stripe Checkout</span>
@@ -292,13 +314,13 @@ function MainApp() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm">
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center shadow-sm">
                 <ShoppingBag size={48} className="mx-auto text-slate-300 mb-3" />
                 <h3 className="text-base font-bold text-slate-800">Your shopping cart is empty</h3>
                 <p className="text-xs text-slate-400 mt-1 mb-4">Explore our multi-vendor marketplace and discover great products.</p>
                 <button
                   onClick={() => setActiveTab('catalog')}
-                  className="bg-indigo-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-indigo-200 transition"
+                  className="bg-[#063F35] hover:bg-[#0B3D35] text-white text-xs font-bold px-5 py-3 rounded-xl shadow-md transition cursor-pointer"
                 >
                   Browse Products
                 </button>
@@ -308,17 +330,17 @@ function MainApp() {
         )}
       </main>
 
-      {/* 💬 Live Messenger Drawer */}
+      {/* Floating AI Assistant */}
+      <AiChatbot />
+
+      {/* Live Chat Drawer */}
       <ChatDrawer
         isOpen={chatDrawer.isOpen}
         onClose={() => setChatDrawer({ isOpen: false, product: null })}
         targetProduct={chatDrawer.product}
       />
 
-      {/* 🤖 24/7 AI Smart Assistant */}
-      <AiChatbot />
-
-      {/* 💳 Stripe Checkout Modal */}
+      {/* Stripe Checkout Modal */}
       {isCheckoutOpen && (
         <CheckoutModal
           isOpen={isCheckoutOpen}
@@ -327,22 +349,21 @@ function MainApp() {
           onOrderSuccess={() => {
             setCart([]);
             setActiveTab('orders');
-            showToast('Order Placed Successfully via Stripe!');
           }}
         />
       )}
 
-      {/* 🔑 Auth Modal */}
+      {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         initialMode={authMode}
       />
 
-      {/* 🗑️ Deletion Confirmation Modals */}
+      {/* Deletion Modals */}
       {deleteConfirm.isOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center relative font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 font-['Plus_Jakarta_Sans',sans-serif]">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center relative">
             <button
               onClick={() => setDeleteConfirm({ isOpen: false, productId: null, productTitle: '' })}
               className="absolute top-4 right-4 text-slate-400 p-1"
@@ -359,13 +380,13 @@ function MainApp() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setDeleteConfirm({ isOpen: false, productId: null, productTitle: '' })}
-                className="w-full py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200"
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDeleteItem}
-                className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-200"
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-200 cursor-pointer"
               >
                 Yes, Remove
               </button>
@@ -375,8 +396,8 @@ function MainApp() {
       )}
 
       {showClearCartConfirm && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center relative font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 font-['Plus_Jakarta_Sans',sans-serif]">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center relative">
             <button
               onClick={() => setShowClearCartConfirm(false)}
               className="absolute top-4 right-4 text-slate-400 p-1"
@@ -393,13 +414,13 @@ function MainApp() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setShowClearCartConfirm(false)}
-                className="w-full py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200"
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmClearCart}
-                className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-200"
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-200 cursor-pointer"
               >
                 Yes, Clear All
               </button>

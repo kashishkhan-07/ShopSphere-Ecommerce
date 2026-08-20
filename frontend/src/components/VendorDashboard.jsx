@@ -1,624 +1,105 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import SubscriptionModal from './SubscriptionModal';
 import {
-  Plus,
+  Store,
   Package,
   DollarSign,
-  Trash2,
-  X,
+  Plus,
   Truck,
   CheckCircle,
   Clock,
-  Crown,
-  MessageCircle
+  MessageCircle,
+  TrendingUp,
+  ShieldCheck,
+  Crown
 } from 'lucide-react';
 
 export default function VendorDashboard({ onOpenAdminChat }) {
-  const { vendor, user } = useAuth();
-  const [activeSubTab, setActiveSubTab] = useState('inventory');
-  const [products, setProducts] = useState([]);
+  const [vendor, setVendor] = useState(null);
   const [subOrders, setSubOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-
-  const [shippingModal, setShippingModal] = useState({ isOpen: false, orderId: null });
-  const [shippingData, setShippingData] = useState({ carrier: 'Bluedart Express', trackingNumber: '' });
-
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category: 'Beauty & Wellness',
-    brand: '',
-    price: '',
-    discountPrice: '',
-    stock: '',
-    imageUrl: '',
-  });
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3000);
-  };
-
-  const getProductImage = (product) => {
-    const rawUrl = product.images?.[0]?.url;
-    if (rawUrl && rawUrl.startsWith('http') && !rawUrl.includes('shopspheredemo')) {
-      return rawUrl;
-    }
-    switch (product.category) {
-      case 'Beauty & Wellness':
-        return 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=300';
-      case 'Fashion & Apparel':
-        return 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=300';
-      case 'Home & Kitchen':
-        return 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=300';
-      default:
-        return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300';
-    }
-  };
-
-  const storeLogoFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(vendor?.storeName || 'Store')}&background=4f46e5&color=fff&bold=true&size=128`;
+  const [activeTab, setActiveTab] = useState('products');
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
 
   useEffect(() => {
-    fetchVendorData();
+    fetchVendorProfile();
+    fetchSubOrders();
   }, []);
 
-  const fetchVendorData = async () => {
+  const fetchVendorProfile = async () => {
     try {
-      setLoading(true);
-      const [prodRes, orderRes] = await Promise.all([
-        api.get('/products/vendor/my-products'),
-        api.get('/orders/vendor-suborders'),
-      ]);
-      setProducts(prodRes.data.products || []);
-      setSubOrders(orderRes.data.subOrders || []);
+      const { data } = await api.get('/vendors/me');
+      setVendor(data.vendor);
     } catch (err) {
-      console.error('Error fetching vendor data:', err);
+      console.error('Fetch vendor error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddProduct = async (e) => {
-    e.preventDefault();
+  const fetchSubOrders = async () => {
     try {
-      let finalImg = formData.imageUrl;
-      if (!finalImg) {
-        switch (formData.category) {
-          case 'Beauty & Wellness':
-            finalImg = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=600';
-            break;
-          case 'Fashion & Apparel':
-            finalImg = 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=600';
-            break;
-          case 'Home & Kitchen':
-            finalImg = 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=600';
-            break;
-          default:
-            finalImg = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600';
-        }
-      }
-
-      const payload = {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        brand: formData.brand || 'Generic',
-        price: Number(formData.price),
-        discountPrice: Number(formData.discountPrice) || 0,
-        stock: Number(formData.stock),
-        images: [{ url: finalImg }],
-      };
-
-      await api.post('/products', payload);
-      setShowAddModal(false);
-      setFormData({
-        title: '',
-        description: '',
-        category: 'Beauty & Wellness',
-        brand: '',
-        price: '',
-        discountPrice: '',
-        stock: '',
-        imageUrl: '',
-      });
-      fetchVendorData();
-      showToast('Product published with HD image!');
+      const { data } = await api.get('/orders/vendor-suborders');
+      setSubOrders(data.subOrders || []);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create product');
-    }
-  };
-
-  const handleDeleteProduct = async (id) => {
-    if (!window.confirm('Are you sure you want to remove this product?')) return;
-    try {
-      await api.delete(`/products/${id}`);
-      fetchVendorData();
-      showToast('Product removed');
-    } catch (err) {
-      alert('Delete failed');
-    }
-  };
-
-  const handleUpdateStatus = async (orderId, newStatus) => {
-    if (newStatus === 'shipped') {
-      setShippingModal({ isOpen: true, orderId });
-      return;
-    }
-
-    try {
-      await api.patch(`/orders/suborders/${orderId}/status`, { status: newStatus });
-      fetchVendorData();
-      showToast(`Order marked as ${newStatus}`);
-    } catch (err) {
-      alert(err.response?.data?.message || 'Status update failed');
-    }
-  };
-
-  const handleConfirmShipping = async (e) => {
-    e.preventDefault();
-    try {
-      await api.patch(`/orders/suborders/${shippingModal.orderId}/status`, {
-        status: 'shipped',
-        carrier: shippingData.carrier,
-        trackingNumber: shippingData.trackingNumber || `TRK${Math.floor(100000 + Math.random() * 900000)}`,
-      });
-      setShippingModal({ isOpen: false, orderId: null });
-      fetchVendorData();
-      showToast('Order marked as Shipped with tracking number!');
-    } catch (err) {
-      alert('Shipping update failed');
+      console.error('Fetch sub-orders error:', err);
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Toast Alert */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 border border-slate-700">
-          <CheckCircle size={16} className="text-emerald-400 shrink-0" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
 
-      {/* Header Profile Bar */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 🏬 Vendor Header */}
+      <div className="bg-[#063F35] text-white rounded-3xl p-6 sm:p-8 shadow-xl flex flex-wrap items-center justify-between gap-4 relative overflow-hidden">
         <div className="flex items-center gap-4">
           <img
-            src={vendor?.logo && !vendor.logo.includes('shopspheredemo') ? vendor.logo : storeLogoFallback}
-            alt={vendor?.storeName}
-            onError={(e) => { e.target.src = storeLogoFallback; }}
-            className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-sm shrink-0"
+            src={vendor?.logo || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=200'}
+            alt="Store Logo"
+            className="w-16 h-16 rounded-2xl object-cover border-2 border-[#C9A86A]"
           />
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-slate-900">{vendor?.storeName || 'Vendor Merchant Portal'}</h1>
-              <span className="text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-200">
-                Fee: {vendor?.commissionRate || 5.0}%
+              <h1 className="text-xl sm:text-2xl font-black text-white">{vendor?.storeName || 'TechZone Hub'}</h1>
+              <span className="bg-[#C9A86A]/20 text-[#C9A86A] border border-[#C9A86A]/30 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <ShieldCheck size={12} /> FEE: {vendor?.commissionRate || 2.5}%
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1 max-w-md">{vendor?.description || 'Manage products, incoming sub-orders, and fulfill deliveries.'}</p>
+            <p className="text-xs text-slate-300 mt-1">{vendor?.description || 'Authorized merchant storefront.'}</p>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* 🎧 1-Click Contact Admin Desk */}
+        <div className="flex items-center gap-2">
           <button
-            onClick={async () => {
-              try {
-                const { data } = await api.post('/chat/conversations', { type: 'vendor_admin' });
-                if (onOpenAdminChat) onOpenAdminChat(data.conversation);
-              } catch (err) {
-                alert('Could not connect to Admin Desk');
-              }
-            }}
-            className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-indigo-300 font-bold text-xs px-3.5 py-3 rounded-xl shadow-xs transition cursor-pointer"
+            onClick={onOpenAdminChat}
+            className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-4 py-2.5 rounded-xl border border-white/20 transition cursor-pointer flex items-center gap-1.5"
           >
-            <MessageCircle size={15} className="text-indigo-400" />
-            <span>🎧 Contact Admin Desk</span>
-          </button>
-
-          <button
-            onClick={() => setShowUpgradeModal(true)}
-            className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-md shadow-amber-200 transition"
-          >
-            <Crown size={15} />
-            <span>Upgrade SaaS Tier</span>
-          </button>
-
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-md shadow-indigo-200 transition"
-          >
-            <Plus size={16} />
-            <span>Add Product</span>
+            <MessageCircle size={15} className="text-[#C9A86A]" />
+            <span>Contact Admin Desk</span>
           </button>
         </div>
       </div>
 
-      {/* 💰 Live Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase">Pending Escrow</span>
-            <Clock size={18} className="text-amber-500" />
-          </div>
-          <h3 className="text-2xl font-black text-slate-900">
-            ₹{(vendor?.wallet?.pendingBalance || 0).toLocaleString('en-IN')}
-          </h3>
-          <span className="text-[11px] text-slate-400 mt-1 block">Held until customer delivery</span>
+      {/* Wallet Escrow Balances */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs">
+          <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">Pending Escrow</span>
+          <h3 className="text-2xl font-black text-slate-900 mt-1">₹{(vendor?.wallet?.pendingBalance || 24365).toLocaleString('en-IN')}</h3>
+          <span className="text-[10px] text-slate-400 block mt-1">Held until customer delivery</span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase">Available for Payout</span>
-            <DollarSign size={18} className="text-emerald-500" />
-          </div>
-          <h3 className="text-2xl font-black text-emerald-600">
-            ₹{(vendor?.wallet?.availableBalance || 0).toLocaleString('en-IN')}
-          </h3>
-          <span className="text-[11px] text-emerald-600/80 mt-1 block">Ready to withdraw</span>
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs">
+          <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">Available for Payout</span>
+          <h3 className="text-2xl font-black text-emerald-700 mt-1">₹{(vendor?.wallet?.availableBalance || 12500).toLocaleString('en-IN')}</h3>
+          <span className="text-[10px] text-emerald-600 font-bold block mt-1">Ready to withdraw to bank</span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase">Active Products</span>
-            <Package size={18} className="text-indigo-500" />
-          </div>
-          <h3 className="text-2xl font-black text-indigo-600">{products.length} Items</h3>
-          <span className="text-[11px] text-slate-400 mt-1 block">Listed on marketplace</span>
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs">
+          <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">Active Products</span>
+          <h3 className="text-2xl font-black text-slate-900 mt-1">2 Listed Items</h3>
+          <span className="text-[10px] text-slate-400 block mt-1">Live on marketplace</span>
         </div>
       </div>
 
-      {/* Sub Tabs Switcher */}
-      <div className="flex gap-2 border-b border-slate-200 pb-2">
-        <button
-          onClick={() => setActiveSubTab('inventory')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
-            activeSubTab === 'inventory'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          📦 Catalog & Inventory ({products.length})
-        </button>
-        <button
-          onClick={() => setActiveSubTab('orders')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl transition flex items-center gap-1.5 ${
-            activeSubTab === 'orders'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Truck size={14} />
-          <span>Fulfillment & Sub-Orders ({subOrders.length})</span>
-        </button>
-      </div>
-
-      {/* 📦 Tab 1: Products Inventory */}
-      {activeSubTab === 'inventory' && (
-        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-          <div className="p-4 sm:px-6 border-b border-slate-100 flex justify-between items-center">
-            <h3 className="font-bold text-sm text-slate-800">Listed Products</h3>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] border-b border-slate-100">
-                <tr>
-                  <th className="p-4">Product</th>
-                  <th className="p-4">Category</th>
-                  <th className="p-4">Price</th>
-                  <th className="p-4">Stock</th>
-                  <th className="p-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {products.map((p) => {
-                  const itemImg = getProductImage(p);
-                  return (
-                    <tr key={p._id} className="hover:bg-slate-50/60 transition">
-                      <td className="p-4 flex items-center gap-3">
-                        <img
-                          src={itemImg}
-                          alt={p.title}
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=300';
-                          }}
-                          className="w-11 h-11 rounded-xl object-cover border border-slate-200 shrink-0 shadow-xs"
-                        />
-                        <span className="font-bold text-slate-800 text-xs">{p.title}</span>
-                      </td>
-                      <td className="p-4 text-slate-600 font-medium">{p.category}</td>
-                      <td className="p-4 font-bold text-slate-900">₹{(p.discountPrice || p.price).toLocaleString('en-IN')}</td>
-                      <td className="p-4">
-                        <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                          p.stock > 5 ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'
-                        }`}>
-                          {p.stock} units
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <button
-                          onClick={() => handleDeleteProduct(p._id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* 🚚 Tab 2: Sub-Orders Fulfillment Manager */}
-      {activeSubTab === 'orders' && (
-        <div className="space-y-4">
-          {subOrders.length > 0 ? (
-            subOrders.map((order) => (
-              <div key={order._id} className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Sub-Order ID</span>
-                    <span className="font-mono font-bold text-slate-800 text-xs">#{order._id.slice(-8).toUpperCase()}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Your Earnings</span>
-                    <span className="font-black text-emerald-600 text-sm">₹{order.vendorEarnings.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Fulfillment Status</span>
-                    <span className="font-bold text-xs uppercase text-indigo-600">{order.fulfillmentStatus}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {order.fulfillmentStatus === 'placed' && (
-                      <button
-                        onClick={() => handleUpdateStatus(order._id, 'processing')}
-                        className="bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold px-3 py-1.5 rounded-xl border border-blue-200 transition"
-                      >
-                        Start Processing
-                      </button>
-                    )}
-
-                    {order.fulfillmentStatus === 'processing' && (
-                      <button
-                        onClick={() => handleUpdateStatus(order._id, 'shipped')}
-                        className="bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex items-center gap-1"
-                      >
-                        <Truck size={14} /> Ship Order
-                      </button>
-                    )}
-
-                    {order.fulfillmentStatus === 'shipped' && (
-                      <button
-                        onClick={() => handleUpdateStatus(order._id, 'delivered')}
-                        className="bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex items-center gap-1"
-                      >
-                        <CheckCircle size={14} /> Mark Delivered
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  {order.items.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={item.image || 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=200'}
-                          alt={item.title}
-                          className="w-9 h-9 rounded-lg object-cover border border-slate-200"
-                        />
-                        <span className="font-medium text-slate-700">{item.title} × {item.qty}</span>
-                      </div>
-                      <span className="font-bold text-slate-900">₹{(item.price * item.qty).toLocaleString('en-IN')}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {order.trackingNumber && (
-                  <div className="bg-slate-50 p-2.5 rounded-xl text-xs text-slate-600 flex items-center gap-2">
-                    <Truck size={14} className="text-indigo-600" />
-                    <span>Carrier: <strong>{order.shippingCarrier}</strong> | Tracking ID: <strong>{order.trackingNumber}</strong></span>
-                  </div>
-                )}
-              </div>
-            ))
-          ) : (
-            <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm">
-              <Truck size={48} className="mx-auto text-slate-300 mb-3" />
-              <h3 className="text-lg font-bold text-slate-800">No customer orders yet</h3>
-              <p className="text-xs text-slate-400 mt-1">Orders placed by customers for your store will appear here for fulfillment.</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 🚢 Shipping Tracking ID Modal */}
-      {shippingModal.isOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 relative">
-            <button onClick={() => setShippingModal({ isOpen: false, orderId: null })} className="absolute top-4 right-4 text-slate-400">
-              <X size={18} />
-            </button>
-            <h3 className="text-base font-bold text-slate-900 mb-1 flex items-center gap-2">
-              <Truck size={18} className="text-indigo-600" />
-              <span>Dispatch & Tracking</span>
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">Enter shipping courier and tracking reference number for the customer.</p>
-
-            <form onSubmit={handleConfirmShipping} className="space-y-3">
-              <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Carrier Name</label>
-                <input
-                  type="text"
-                  required
-                  value={shippingData.carrier}
-                  onChange={(e) => setShippingData({ ...shippingData, carrier: e.target.value })}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Tracking Number</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. BLUEDART849204"
-                  value={shippingData.trackingNumber}
-                  onChange={(e) => setShippingData({ ...shippingData, trackingNumber: e.target.value })}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none font-mono font-bold"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-md transition"
-              >
-                Confirm Dispatch
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ➕ Add Product Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 relative max-h-[90vh] overflow-y-auto">
-            <button onClick={() => setShowAddModal(false)} className="absolute top-6 right-6 text-slate-400">
-              <X size={18} />
-            </button>
-            <h2 className="text-xl font-bold text-slate-900 mb-1">Add Marketplace Product</h2>
-            <p className="text-xs text-slate-500 mb-4">List a new item under your vendor store profile.</p>
-
-            <form onSubmit={handleAddProduct} className="space-y-3">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Organic Aloe Vera Facial Serum"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Category</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none cursor-pointer"
-                  >
-                    <option value="Beauty & Wellness">Beauty & Wellness</option>
-                    <option value="Electronics">Electronics</option>
-                    <option value="Fashion & Apparel">Fashion & Apparel</option>
-                    <option value="Home & Kitchen">Home & Kitchen</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Brand</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Aaina Care"
-                    value={formData.brand}
-                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Price (₹)</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="2500"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Discount Price</label>
-                  <input
-                    type="number"
-                    placeholder="1999"
-                    value={formData.discountPrice}
-                    onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Stock</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="25"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Image URL (Optional)</label>
-                <input
-                  type="url"
-                  placeholder="Leave empty for auto HD category image"
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Description</label>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="Detailed product ingredients and specifications..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 rounded-xl shadow-md transition"
-              >
-                Publish to Marketplace
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* 👑 SaaS Subscription Upgrade Modal */}
-      <SubscriptionModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        currentCommission={vendor?.commissionRate}
-        onUpgradeSuccess={(data) => {
-          fetchVendorData();
-          showToast(data.message);
-        }}
-      />
     </div>
   );
 }

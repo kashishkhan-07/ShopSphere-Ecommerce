@@ -1,85 +1,51 @@
 const Vendor = require('../models/Vendor');
-const SubscriptionPlan = require('../models/SubscriptionPlan');
+const User = require('../models/User');
 
-// @desc    Get all active vendors
-// @route   GET /api/vendors
-// @access  Public
-exports.getVendors = async (req, res) => {
+// @desc    Get Current Logged In Vendor Profile (Auto-Creates if missing)
+// @route   GET /api/vendors/me
+// @access  Private (Vendor Only)
+const getVendorProfile = async (req, res) => {
   try {
-    const vendors = await Vendor.find({ isVerified: true })
-      .populate('user', 'name avatar')
-      .populate('subscriptionPlan');
+    let vendor = await Vendor.findOne({ user: req.user.id }).populate('subscriptionPlan');
 
-    return res.status(200).json({
-      success: true,
-      count: vendors.length,
-      vendors,
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-// @desc    Get vendor store by slug
-// @route   GET /api/vendors/:slug
-// @access  Public
-exports.getVendorBySlug = async (req, res) => {
-  try {
-    const vendor = await Vendor.findOne({ storeSlug: req.params.slug })
-      .populate('user', 'name avatar')
-      .populate('subscriptionPlan');
-
+    // If Vendor Profile does not exist yet for this user, create it automatically!
     if (!vendor) {
-      return res.status(404).json({ success: false, message: 'Vendor store not found' });
+      const user = await User.findById(req.user.id);
+      const storeName = user.storeName || (user.name.endsWith('Store') || user.name.endsWith('Tech') ? user.name : `${user.name} Store`);
+      const storeSlug = storeName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now();
+
+      vendor = await Vendor.create({
+        user: req.user.id,
+        storeName: storeName,
+        storeSlug: storeSlug,
+        description: `Official marketplace storefront for ${user.name}.`,
+        logo: user.avatar || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=200',
+        commissionRate: 5.0,
+        isVerified: true,
+        wallet: { availableBalance: 0, pendingBalance: 0 },
+      });
     }
 
     return res.status(200).json({ success: true, vendor });
   } catch (err) {
+    console.error('Get Vendor Profile Error:', err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Get all available SaaS Subscription Plans
-// @route   GET /api/vendors/plans
+// @desc    Get All Vendors
+// @route   GET /api/vendors
 // @access  Public
-exports.getSubscriptionPlans = async (req, res) => {
+const getAllVendors = async (req, res) => {
   try {
-    const plans = await SubscriptionPlan.find({ isActive: true });
-    return res.status(200).json({ success: true, plans });
+    const vendors = await Vendor.find({ isVerified: true }).populate('user', 'name email phone avatar');
+    return res.status(200).json({ success: true, count: vendors.length, vendors });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Upgrade Vendor SaaS Subscription Tier
-// @route   POST /api/vendors/upgrade-plan
-// @access  Private (Vendor)
-exports.upgradePlan = async (req, res) => {
-  try {
-    const { planSlug } = req.body;
-    const vendor = await Vendor.findOne({ user: req.user.id });
-
-    if (!vendor) {
-      return res.status(404).json({ success: false, message: 'Vendor profile not found' });
-    }
-
-    const plan = await SubscriptionPlan.findOne({ slug: planSlug });
-    if (!plan) {
-      return res.status(404).json({ success: false, message: 'Subscription plan not found' });
-    }
-
-    vendor.subscriptionPlan = plan._id;
-    vendor.commissionRate = plan.commissionRate;
-    vendor.subscriptionStatus = 'active';
-    await vendor.save();
-
-    return res.status(200).json({
-      success: true,
-      message: `Successfully upgraded to ${plan.name} Plan! Commission lowered to ${plan.commissionRate}%.`,
-      vendor,
-      plan,
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
+module.exports = {
+  getVendorProfile,
+  getAllVendors,
 };

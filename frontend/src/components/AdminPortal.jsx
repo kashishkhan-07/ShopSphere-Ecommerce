@@ -2,161 +2,145 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import {
   ShieldCheck,
-  Store,
-  DollarSign,
-  Package,
-  Users,
-  MessageCircle,
-  CheckCircle,
   TrendingUp,
-  AlertCircle
+  DollarSign,
+  Store,
+  Users,
+  CheckCircle,
+  MessageCircle,
+  Building,
+  Percent
 } from 'lucide-react';
 
 export default function AdminPortal({ onOpenVendorChat }) {
+  const [metrics, setMetrics] = useState({
+    totalGMV: 148990,
+    platformCommission: 7449.50,
+    activeVendors: 5,
+    totalOrders: 18,
+  });
+
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchVendors();
+    fetchAdminData();
   }, []);
 
-  const fetchVendors = async () => {
+  const fetchAdminData = async () => {
     try {
       setLoading(true);
       const { data } = await api.get('/vendors');
       setVendors(data.vendors || []);
     } catch (err) {
-      console.error('Failed to fetch vendors:', err);
+      console.error('Fetch admin vendors error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStartVendorChat = async (vendor) => {
-    try {
-      const targetUserId = (vendor.user?._id || vendor.user || '').toString();
-      const { data } = await api.post('/chat/conversations', {
-        recipientId: targetUserId,
-        vendorId: vendor._id,
-        type: 'vendor_admin',
-      });
-      if (onOpenVendorChat && data.conversation) {
-        onOpenVendorChat(data.conversation);
-      }
-    } catch (err) {
-      alert('Failed to connect to vendor');
-    }
-  };
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 px-3 py-0.5 rounded-full text-xs font-bold border border-amber-500/30">
+
+      {/* 👑 Super Admin Dark Emerald Header */}
+      <div className="bg-[#063F35] text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden flex items-center justify-between">
+        <div className="space-y-2 relative z-10">
+          <div className="inline-flex items-center gap-1.5 bg-[#C9A86A]/20 text-[#C9A86A] px-3 py-1 rounded-full text-[11px] font-bold border border-[#C9A86A]/30">
             <ShieldCheck size={14} />
-            <span>Super Admin Headquarters</span>
+            <span>Super Admin Command Center</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white">Platform Governance & Vendor Desk</h1>
-          <p className="text-xs sm:text-sm text-slate-300">
-            Monitor GMV revenue, manage vendor compliance, and provide instant executive support.
+          <h1 className="text-2xl sm:text-3xl font-black text-white">
+            Marketplace Governance & Revenue Analytics
+          </h1>
+          <p className="text-xs text-slate-300">
+            Real-time platform GMV earnings, vendor verification, and commission escrow settings.
           </p>
         </div>
       </div>
 
-      {/* 📊 Live SaaS Analytics */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase">Total Platform GMV</span>
-            <TrendingUp size={18} className="text-emerald-500" />
-          </div>
-          <h3 className="text-2xl font-black text-slate-900">₹8,49,200</h3>
-          <span className="text-[10px] text-emerald-600 font-semibold mt-1 block">↑ 18.4% this week</span>
+      {/* 📊 Metrics Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs">
+          <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">Gross Merchandise Value</span>
+          <h3 className="text-2xl font-black text-slate-900 mt-1">₹{metrics.totalGMV.toLocaleString('en-IN')}</h3>
+          <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
+            <TrendingUp size={12} /> +18.4% this month
+          </span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase">Admin Net Cut (5%)</span>
-            <DollarSign size={18} className="text-indigo-600" />
-          </div>
-          <h3 className="text-2xl font-black text-indigo-600">₹42,460</h3>
-          <span className="text-[10px] text-slate-400 mt-1 block">Direct Platform Commission</span>
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs">
+          <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">Net Platform Commission (5%)</span>
+          <h3 className="text-2xl font-black text-[#063F35] mt-1">₹{metrics.platformCommission.toLocaleString('en-IN')}</h3>
+          <span className="text-[10px] text-slate-500 block mt-1">Auto-credited from Escrow</span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase">Verified Merchants</span>
-            <Store size={18} className="text-amber-500" />
-          </div>
-          <h3 className="text-2xl font-black text-slate-900">{vendors.length} Active</h3>
-          <span className="text-[10px] text-slate-400 mt-1 block">100% KYC Approved</span>
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs">
+          <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">Active Verified Vendors</span>
+          <h3 className="text-2xl font-black text-slate-900 mt-1">{vendors.length || 5} Stores</h3>
+          <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
+            <ShieldCheck size={12} /> 100% Verified
+          </span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase">Platform Health</span>
-            <CheckCircle size={18} className="text-emerald-500" />
-          </div>
-          <h3 className="text-2xl font-black text-emerald-600">99.98%</h3>
-          <span className="text-[10px] text-emerald-600/80 mt-1 block">All Gateway Nodes Green</span>
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs">
+          <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">Total Marketplace Orders</span>
+          <h3 className="text-2xl font-black text-slate-900 mt-1">{metrics.totalOrders}</h3>
+          <span className="text-[10px] text-slate-500 block mt-1">Processed via Stripe</span>
         </div>
       </div>
 
-      {/* 🏬 Registered Merchants & Direct Chat Controls */}
-      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
-        <div className="p-4 sm:px-6 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-            <Store size={16} className="text-indigo-600" />
-            <span>Merchant Directory & Direct Communication Channels</span>
-          </h3>
+      {/* 🏬 Verified Merchant Directory */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div>
+            <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+              <Store size={18} className="text-[#063F35]" />
+              <span>Merchant Store Directory & Escrow Rates</span>
+            </h3>
+            <p className="text-xs text-slate-500">Manage vendor commission rates and support desk channels</p>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] border-b border-slate-100">
-              <tr>
-                <th className="p-4">Store Name</th>
-                <th className="p-4">Tier / Plan</th>
-                <th className="p-4">Commission Fee</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Direct Action</th>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-100 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                <th className="py-3 px-2">Store & Owner</th>
+                <th className="py-3 px-2">Commission Tier</th>
+                <th className="py-3 px-2">Wallet Escrow Balance</th>
+                <th className="py-3 px-2">Status</th>
+                <th className="py-3 px-2 text-right">Support Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 text-xs">
               {vendors.map((v) => (
-                <tr key={v._id} className="hover:bg-slate-50/60 transition">
-                  <td className="p-4 flex items-center gap-3">
-                    <img
-                      src={v.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(v.storeName)}&background=6366f1&color=fff&bold=true`}
-                      alt={v.storeName}
-                      className="w-10 h-10 rounded-xl object-cover border border-slate-200"
-                    />
+                <tr key={v._id} className="hover:bg-slate-50 transition">
+                  <td className="py-3 px-2 flex items-center gap-3">
+                    <img src={v.logo || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=100'} className="w-9 h-9 rounded-xl object-cover" />
                     <div>
-                      <span className="font-bold text-slate-900 block text-xs">{v.storeName}</span>
-                      <span className="text-[10px] text-slate-400 block">{v.user?.email || 'merchant@shopsphere.io'}</span>
+                      <h4 className="font-bold text-slate-900">{v.storeName}</h4>
+                      <span className="text-[10px] text-slate-400">{v.user?.email || 'merchant@shopsphere.io'}</span>
                     </div>
                   </td>
-                  <td className="p-4 font-semibold text-slate-700">
-                    {v.subscriptionPlan?.name || 'Starter Tier'}
-                  </td>
-                  <td className="p-4">
-                    <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-bold text-[10px] border border-emerald-200">
-                      {v.commissionRate || 5.0}% Cut
+                  <td className="py-3 px-2">
+                    <span className="bg-emerald-50 text-[#063F35] font-bold px-2 py-0.5 rounded-md border border-emerald-200 text-[11px]">
+                      {v.commissionRate || 2.5}% Fee
                     </span>
                   </td>
-                  <td className="p-4">
-                    <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-bold text-[10px] border border-indigo-200 flex items-center gap-1 w-fit">
-                      <CheckCircle size={10} /> Verified Merchant
+                  <td className="py-3 px-2 font-bold text-slate-900">
+                    ₹{(v.wallet?.availableBalance || 0).toLocaleString('en-IN')}
+                  </td>
+                  <td className="py-3 px-2">
+                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 w-fit">
+                      <CheckCircle size={10} /> Verified
                     </span>
                   </td>
-                  <td className="p-4 text-right">
+                  <td className="py-3 px-2 text-right">
                     <button
-                      onClick={() => handleStartVendorChat(v)}
-                      className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-xs transition"
+                      onClick={onOpenVendorChat}
+                      className="bg-[#063F35] text-white text-[11px] font-bold px-3 py-1.5 rounded-xl hover:bg-[#0B3D35] transition cursor-pointer inline-flex items-center gap-1"
                     >
-                      <MessageCircle size={14} />
-                      <span>Live Chat</span>
+                      <MessageCircle size={13} /> Chat HQ
                     </button>
                   </td>
                 </tr>
@@ -165,6 +149,7 @@ export default function AdminPortal({ onOpenVendorChat }) {
           </table>
         </div>
       </div>
+
     </div>
   );
 }
