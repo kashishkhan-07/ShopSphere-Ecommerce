@@ -11,10 +11,30 @@ import AiChatbot from './components/AiChatbot';
 import AuthModal from './components/AuthModal';
 import WishlistPage from './components/WishlistPage';
 import { ShoppingBag, Trash2, CheckCircle, AlertTriangle, X, CreditCard, Plus, Minus } from 'lucide-react';
+import axios from 'axios';
 
 function MainApp() {
   const { user, isAuthenticated, isVendor, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState('catalog');
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = localStorage.getItem('shopsphere_user');
+    if (saved) {
+      try {
+        const u = JSON.parse(saved);
+        if (u.role === 'vendor') return 'vendor-portal';
+        if (u.role === 'admin') return 'admin-portal';
+      } catch (e) {}
+    }
+    return 'catalog';
+  });
+
+  useEffect(() => {
+    if (isVendor && activeTab === 'catalog') {
+      setActiveTab('vendor-portal');
+    }
+    if (isAdmin && activeTab === 'catalog') {
+      setActiveTab('admin-portal');
+    }
+  }, [isVendor, isAdmin]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -33,6 +53,7 @@ function MainApp() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [chatDrawer, setChatDrawer] = useState({ isOpen: false, product: null });
   const [toastMessage, setToastMessage] = useState('');
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, productId: null, productTitle: '' });
   const [showClearCartConfirm, setShowClearCartConfirm] = useState(false);
@@ -44,6 +65,33 @@ function MainApp() {
   useEffect(() => {
     localStorage.setItem('shopsphere_wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
+
+  // 🔴 Real-Time Unread Messages Counter for Navbar (Customer & Vendor)
+  useEffect(() => {
+    if (!user) return;
+    const checkUnread = async () => {
+      try {
+        const uId = user.id || user._id || user.email;
+        const sName = user.storeName || user.name;
+        const res = await axios.get(`/api/chat/user/${uId}?storeName=${encodeURIComponent(sName)}`);
+        if (res.data.success && res.data.chats) {
+          let count = 0;
+          res.data.chats.forEach((c) => {
+            const last = c.messages?.[c.messages.length - 1];
+            if (last) {
+              const sentByMe = isVendor ? last.senderRole === 'vendor' : last.senderRole === 'buyer';
+              if (!sentByMe) count += 1;
+            }
+          });
+          setUnreadChatCount(count);
+        }
+      } catch (e) {}
+    };
+
+    checkUnread();
+    const interval = setInterval(checkUnread, 2500);
+    return () => clearInterval(interval);
+  }, [user, isVendor]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -125,6 +173,21 @@ function MainApp() {
     showToast('Cart emptied');
   };
 
+  const [vendorSubTab, setVendorSubTab] = useState('products');
+  const [adminSubTab, setAdminSubTab] = useState('governance');
+
+  const handleNavbarChatClick = () => {
+    if (isAdmin) {
+      setAdminSubTab('vendor-chats');
+      setActiveTab('admin-portal');
+    } else if (isVendor) {
+      setVendorSubTab('messages');
+      setActiveTab('vendor-portal');
+    } else {
+      setChatDrawer({ isOpen: true, product: null });
+    }
+  };
+
   const totalCartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotalAmount = cart.reduce((sum, item) => {
     const price = item.product.discountPrice > 0 ? item.product.discountPrice : item.product.price;
@@ -152,7 +215,8 @@ function MainApp() {
         setSelectedCategory={setSelectedCategory}
         cartCount={totalCartCount}
         wishlistCount={wishlist.length}
-        onOpenChatDrawer={() => setChatDrawer({ isOpen: true, product: null })}
+        unreadChatCount={unreadChatCount}
+        onOpenChatDrawer={handleNavbarChatClick}
         openAuthModal={(mode) => { setAuthMode(mode); setIsAuthOpen(true); }}
       />
 
@@ -182,11 +246,17 @@ function MainApp() {
         {activeTab === 'orders' && <CustomerOrders />}
 
         {activeTab === 'vendor-portal' && (
-          <VendorDashboard onOpenAdminChat={() => setChatDrawer({ isOpen: true, product: null })} />
+          <VendorDashboard onOpenAdminChat={() => setChatDrawer({ isOpen: true, product: null })} currentUser={user} initialTab={vendorSubTab} />
         )}
 
         {activeTab === 'admin-portal' && (
-          <AdminPortal onOpenVendorChat={() => setChatDrawer({ isOpen: true, product: null })} />
+          <AdminPortal
+            onOpenVendorChat={() => {
+              setAdminSubTab('vendor-chats');
+              setActiveTab('admin-portal');
+            }}
+            initialTab={adminSubTab}
+          />
         )}
 
         {/* Shopping Cart Page */}
@@ -338,6 +408,7 @@ function MainApp() {
         isOpen={chatDrawer.isOpen}
         onClose={() => setChatDrawer({ isOpen: false, product: null })}
         targetProduct={chatDrawer.product}
+        currentUser={user}
       />
 
       {/* Stripe Checkout Modal */}

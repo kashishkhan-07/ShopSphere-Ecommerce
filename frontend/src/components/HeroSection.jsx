@@ -1,73 +1,462 @@
-import React from 'react';
-import { ShoppingBag, Store, ShieldCheck, ArrowRight, Sparkles, Truck } from 'lucide-react';
+import React from "react";
+import {
+  ShieldCheck,
+  Lock,
+  Truck,
+  RotateCcw,
+  Headphones,
+  Star,
+  ArrowRight,
+  Store,
+} from "lucide-react";
 
 export default function HeroSection({ onShopNow, onExploreStores }) {
   return (
-    <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-4 font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="w-full space-y-5 font-['Plus_Jakarta_Sans',sans-serif]">
 
-      {/* 🌲 Main Deep Emerald Banner */}
-      <div className="lg:col-span-2 bg-[#063F35] text-white rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[220px] sm:min-h-[280px]">
-        <div className="space-y-3 relative z-10 max-w-lg">
-          <span className="inline-flex items-center gap-1.5 bg-[#C9A86A]/20 text-[#C9A86A] px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold border border-[#C9A86A]/30">
-            <Sparkles size={13} /> Multi-Vendor Marketplace Platform
-          </span>
+      {/* Main Layout */}
+      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
 
-          <h1 className="text-xl sm:text-3xl lg:text-4xl font-black text-white leading-tight tracking-tight">
-            Discover Verified Stores & Premium Quality Goods
-          </h1>
+        {/* ================= HERO SECTION ================= */}
+        <div
+          className="
+            relative
+            min-h-[300px]
+            overflow-hidden
+            rounded-3xl
+            border border-[#0A3D33]
+            bg-[#04241e]
+            shadow-2xl
+            sm:min-h-[350px]
+            lg:col-span-8
+            lg:min-h-[350px]
+          "
+        >
 
-          <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
-            Shop directly from authentic Indian brands with 256-bit Stripe Escrow protection and fast door delivery.
-          </p>
+          {/* Full Hero Image */}
+          <div className="absolute inset-0">
+            <img
+              src="/hero-banner-exact.png"
+              alt="ShopSphere products"
+              className="
+                h-full
+                w-full
+                object-cover
+                object-center
+              "
+            />
+          </div>
+
+          {/* Subtle Overlay - Low Transparency */}
+          <div
+            className="
+              absolute
+              inset-0
+              z-[1]
+              bg-gradient-to-r
+              from-[#04241e]/80
+              via-[#04241e]/30
+              to-transparent
+            "
+          />
+
+          {/* Very Light Bottom Overlay */}
+          <div
+            className="
+              absolute
+              inset-x-0
+              bottom-0
+              z-[1]
+              h-24
+              bg-gradient-to-t
+              from-[#04241e]/20
+              to-transparent
+            "
+          />
+
+          {/* Content */}
+          <div
+            className="
+              relative
+              z-10
+              flex
+              h-full
+              min-h-[300px]
+              items-center
+              sm:min-h-[350px]
+              lg:min-h-[350px]
+            "
+          >
+
+            <div
+              className="
+                w-full
+                p-5
+                sm:w-[68%]
+                sm:p-7
+                lg:w-[55%]
+                lg:p-8
+              "
+            >
+
+              {/* Badge */}
+              <span
+                className="
+                  inline-flex
+                  items-center
+                  gap-1.5
+                  rounded-full
+                  border
+                  border-[#C9A86A]/40
+                  bg-[#0f4036]/90
+                  px-3
+                  py-1
+                  text-[10px]
+                  font-bold
+                  text-[#C9A86A]
+                  shadow-sm
+                  backdrop-blur-sm
+                "
+              >
+                <Star
+                  size={11}
+                  className="fill-[#C9A86A] text-[#C9A86A]"
+                />
+
+                Multi-Vendor Marketplace
+              </span>
+
+              {/* Heading */}
+              <h1
+                className="
+                  mt-3
+                  text-2xl
+                  font-extrabold
+                  leading-[1.1]
+                  tracking-tight
+                  text-white
+                  sm:text-3xl
+                  lg:text-4xl
+                "
+              >
+                Shop{" "}
+                <span className="text-[#C9A86A]">
+                  authentic.
+                </span>
+
+                <br />
+
+                Support{" "}
+                <span className="text-[#C9A86A]">
+                  local.
+                </span>
+              </h1>
+
+              {/* Description */}
+              <p
+                className="
+                  mt-3
+                  max-w-sm
+                  text-xs
+                  leading-relaxed
+                  text-slate-200
+                  sm:text-sm
+                "
+              >
+                Explore verified sellers, quality products and handcrafted
+                brands across categories.
+              </p>
+
+              {/* Buttons */}
+              <div className="mt-5 flex flex-wrap items-center gap-2.5">
+
+                {/* Shop Now */}
+                <button
+                  onClick={onShopNow}
+                  className="
+                    flex
+                    cursor-pointer
+                    items-center
+                    gap-2
+                    rounded-xl
+                    border
+                    border-[#C9A86A]/50
+                    bg-[#09352c]/95
+                    px-4
+                    py-2.5
+                    text-[11px]
+                    font-bold
+                    text-white
+                    shadow-md
+                    transition
+                    hover:bg-[#0e4539]
+                  "
+                >
+                  <span>Shop Now</span>
+                  <ArrowRight size={14} />
+                </button>
+
+                {/* Explore Stores */}
+                <button
+                  onClick={onExploreStores}
+                  className="
+                    flex
+                    cursor-pointer
+                    items-center
+                    gap-2
+                    rounded-xl
+                    border
+                    border-[#C9A86A]/60
+                    bg-black/10
+                    px-4
+                    py-2.5
+                    text-[11px]
+                    font-bold
+                    text-[#C9A86A]
+                    backdrop-blur-sm
+                    transition
+                    hover:bg-white/10
+                  "
+                >
+                  <Store size={14} />
+                  <span>Explore Stores</span>
+                </button>
+
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 pt-4 relative z-10">
-          <button
-            onClick={onShopNow}
-            className="bg-[#C9A86A] hover:bg-[#D4B67B] text-[#063F35] font-black text-xs px-5 py-3 rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer"
-          >
-            <span>Explore Products</span>
-            <ArrowRight size={15} />
-          </button>
+        {/* ================= WHY SHOPSPHERE ================= */}
+        <div
+          className="
+            relative
+            overflow-hidden
+            rounded-3xl
+            border border-[#C9A86A]/20
+            bg-gradient-to-br
+            from-[#FBF9F4]
+            via-[#F8F5EC]
+            to-[#EEF5F0]
+            p-5
+            shadow-md
+            lg:col-span-4
+          "
+        >
 
-          <button
-            onClick={onExploreStores}
-            className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-4 py-3 rounded-xl border border-white/20 transition cursor-pointer flex items-center gap-2"
-          >
-            <Store size={15} className="text-[#C9A86A]" />
-            <span>Merchant Stores</span>
-          </button>
+          {/* Decorative Background */}
+          <div
+            className="
+              absolute
+              -right-10
+              -top-10
+              h-24
+              w-24
+              rounded-full
+              bg-[#C9A86A]/10
+              blur-2xl
+            "
+          />
+
+          <div
+            className="
+              absolute
+              -bottom-10
+              -left-8
+              h-24
+              w-24
+              rounded-full
+              bg-[#063F35]/10
+              blur-2xl
+            "
+          />
+
+          <div className="relative z-10">
+
+            {/* Header */}
+            <div className="mb-4 flex items-center justify-between">
+
+              <div>
+                <p
+                  className="
+                    mb-0.5
+                    text-[8px]
+                    font-bold
+                    uppercase
+                    tracking-[0.16em]
+                    text-[#C9A86A]
+                  "
+                >
+                  Shop With Confidence
+                </p>
+
+                <h3 className="text-base font-black tracking-tight text-[#063F35]">
+                  Why ShopSphere?
+                </h3>
+              </div>
+
+              <div
+                className="
+                  flex
+                  h-9
+                  w-9
+                  items-center
+                  justify-center
+                  rounded-xl
+                  border
+                  border-[#C9A86A]/25
+                  bg-white/70
+                  text-[#063F35]
+                  shadow-sm
+                "
+              >
+                <ShieldCheck size={18} />
+              </div>
+
+            </div>
+
+            {/* Features */}
+            <div className="space-y-2">
+
+              <Feature
+                icon={<ShieldCheck size={15} />}
+                title="Verified Sellers"
+                description="Trusted & quality products"
+              />
+
+              <Feature
+                icon={<Lock size={15} />}
+                title="Secure Payments"
+                description="100% protected transactions"
+              />
+
+              <Feature
+                icon={<Truck size={15} />}
+                title="Fast Delivery"
+                description="Across verified sellers"
+              />
+
+              <Feature
+                icon={<RotateCcw size={15} />}
+                title="Easy Returns"
+                description="Hassle-free returns"
+              />
+
+              <Feature
+                icon={<Headphones size={15} />}
+                title="Live Support"
+                description="24/7 customer support"
+              />
+
+            </div>
+
+            {/* Trust Badge */}
+            <div
+              className="
+                mt-4
+                flex
+                items-center
+                gap-2.5
+                rounded-xl
+                border
+                border-[#063F35]/10
+                bg-white/60
+                px-3
+                py-2
+              "
+            >
+
+              <div
+                className="
+                  flex
+                  h-7
+                  w-7
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-lg
+                  bg-[#063F35]
+                  text-[#C9A86A]
+                "
+              >
+                <Star
+                  size={13}
+                  className="fill-current"
+                />
+              </div>
+
+              <div>
+                <p className="text-[10px] font-extrabold text-[#063F35]">
+                  Shopping made simple
+                </p>
+
+                <p className="text-[8px] text-slate-500">
+                  Trusted marketplace experience
+                </p>
+              </div>
+
+            </div>
+
+          </div>
         </div>
+
+      </div>
+    </div>
+  );
+}
+
+
+/* ================= FEATURE COMPONENT ================= */
+
+function Feature({ icon, title, description }) {
+  return (
+    <div
+      className="
+        group
+        flex
+        items-center
+        gap-2.5
+        rounded-xl
+        bg-white/50
+        px-2.5
+        py-2
+        transition-all
+        duration-200
+        hover:bg-white/90
+        hover:shadow-sm
+      "
+    >
+
+      {/* Icon */}
+      <div
+        className="
+          flex
+          h-8
+          w-8
+          shrink-0
+          items-center
+          justify-center
+          rounded-lg
+          bg-[#063F35]/10
+          text-[#063F35]
+          transition
+          group-hover:bg-[#063F35]
+          group-hover:text-[#C9A86A]
+        "
+      >
+        {icon}
       </div>
 
-      {/* 🛡️ Side Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+      {/* Text */}
+      <div className="min-w-0">
 
-        {/* Trust Card */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs flex items-start gap-4">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#063F35] flex items-center justify-center shrink-0">
-            <ShieldCheck size={20} />
-          </div>
-          <div>
-            <h4 className="font-bold text-xs sm:text-sm text-slate-900">100% Escrow Protection</h4>
-            <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-              Your payment is held safely until your sub-order is delivered.
-            </p>
-          </div>
-        </div>
+        <h4 className="text-[11px] font-extrabold leading-tight text-slate-900">
+          {title}
+        </h4>
 
-        {/* Seller Card */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs flex items-start gap-4">
-          <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
-            <Store size={20} />
-          </div>
-          <div>
-            <h4 className="font-bold text-xs sm:text-sm text-slate-900">Become a Merchant</h4>
-            <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-              Register your business storefront and reach customers nationwide.
-            </p>
-          </div>
-        </div>
+        <p className="mt-0.5 text-[9px] leading-tight text-slate-500">
+          {description}
+        </p>
 
       </div>
 

@@ -70,7 +70,7 @@ export default function ProductGrid({
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.vendor?.storeName?.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -157,7 +157,7 @@ export default function ProductGrid({
                       </span>
                     )}
 
-                    {/* ❤️ Wishlist Heart (CUSTOMERS & GUESTS ONLY - Hidden for Vendors/Admins) */}
+                    {/* ❤️ Wishlist Heart */}
                     {!isVendor && !isAdmin && (
                       <button
                         type="button"
@@ -202,7 +202,7 @@ export default function ProductGrid({
                       </div>
                     </div>
 
-                    {/* 🛒 Bottom Actions: Customers get Add to Cart; Vendors/Admins get Contact Seller */}
+                    {/* 🛒 Bottom Actions */}
                     <div className="flex items-center gap-1.5 pt-1">
                       {!isVendor && !isAdmin ? (
                         <>
@@ -211,9 +211,9 @@ export default function ProductGrid({
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              onOpenChat(product);
+                              if (onOpenChat) onOpenChat(product);
                             }}
-                            title="Chat with seller"
+                            title={`Chat with ${product.vendor?.storeName || 'seller'}`}
                             className="p-2 text-slate-500 hover:text-[#063F35] hover:bg-emerald-50 border border-slate-200 rounded-xl transition cursor-pointer"
                           >
                             <MessageCircle size={14} />
@@ -235,7 +235,7 @@ export default function ProductGrid({
                       ) : (
                         <button
                           type="button"
-                          onClick={() => onOpenChat(product)}
+                          onClick={() => onOpenChat && onOpenChat(product)}
                           className="w-full bg-[#063F35] hover:bg-[#0B3D35] text-white text-[11px] font-bold py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                         >
                           <MessageCircle size={14} />

@@ -3,7 +3,6 @@ const Vendor = require('../models/Vendor');
 
 // @desc    Get All Products
 // @route   GET /api/products
-// @access  Public
 const getProducts = async (req, res) => {
   try {
     const { category, sort } = req.query;
@@ -27,12 +26,11 @@ const getProducts = async (req, res) => {
   }
 };
 
-// @desc    Get Products for Current Logged In Vendor
+// @desc    Get Products for Current Vendor
 // @route   GET /api/products/my-products
-// @access  Private (Vendor Only)
 const getMyProducts = async (req, res) => {
   try {
-    const vendor = await Vendor.findOne({ user: req.user.id });
+    const vendor = await Vendor.findOne({ user: req.user?.id });
     if (!vendor) {
       return res.status(200).json({ success: true, count: 0, products: [] });
     }
@@ -44,30 +42,24 @@ const getMyProducts = async (req, res) => {
   }
 };
 
-// @desc    Create New Product (Vendor Only)
+// @desc    Create New Product
 // @route   POST /api/products
-// @access  Private (Vendor Only)
 const createProduct = async (req, res) => {
   try {
-    let vendor = await Vendor.findOne({ user: req.user.id });
-    if (!vendor) {
-      vendor = await Vendor.create({
-        user: req.user.id,
-        storeName: `${req.user.name} Store`,
-        storeSlug: (`${req.user.name}-store-` + Date.now()).toLowerCase().replace(/\s+/g, '-'),
-        description: `Official storefront for ${req.user.name}`,
-        commissionRate: 5.0,
-      });
+    const { title, name, description, category, brand, price, discountPrice, stock, image, store } = req.body;
+    const storeName = store || brand || 'Vendor Store';
+
+    let vendorObj;
+    if (req.user?.id) {
+      vendorObj = await Vendor.findOne({ user: req.user.id });
     }
 
-    const { title, description, category, brand, price, discountPrice, stock, image } = req.body;
-
     const product = await Product.create({
-      vendor: vendor._id,
-      title,
+      vendor: vendorObj ? vendorObj._id : undefined,
+      title: title || name,
       description,
-      category: category || 'Electronics',
-      brand: brand || vendor.storeName,
+      category: category || 'Fashion',
+      brand: storeName,
       price: Number(price),
       discountPrice: Number(discountPrice) || 0,
       stock: Number(stock) || 10,
@@ -83,25 +75,20 @@ const createProduct = async (req, res) => {
   }
 };
 
-// @desc    Update Vendor Product (Vendor Only)
+// @desc    Update Vendor Product (Edit)
 // @route   PUT /api/products/:id
-// @access  Private (Vendor Only)
 const updateProduct = async (req, res) => {
   try {
-    const vendor = await Vendor.findOne({ user: req.user.id });
     let product = await Product.findById(req.params.id);
 
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    if (product.vendor.toString() !== vendor._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Not authorized to edit this product' });
-    }
-
-    const { title, description, category, brand, price, discountPrice, stock, image } = req.body;
+    const { title, name, description, category, brand, price, discountPrice, stock, image } = req.body;
     const updateData = {};
-    if (title) updateData.title = title;
+
+    if (title || name) updateData.title = title || name;
     if (description !== undefined) updateData.description = description;
     if (category) updateData.category = category;
     if (brand) updateData.brand = brand;
@@ -114,30 +101,26 @@ const updateProduct = async (req, res) => {
 
     return res.status(200).json({ success: true, message: 'Product updated successfully!', product });
   } catch (err) {
+    console.error('Update Product Error:', err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Delete Vendor Product (Vendor Only)
+// @desc    Delete Vendor Product
 // @route   DELETE /api/products/:id
-// @access  Private (Vendor Only)
 const deleteProduct = async (req, res) => {
   try {
-    const vendor = await Vendor.findOne({ user: req.user.id });
     const product = await Product.findById(req.params.id);
 
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    if (product.vendor.toString() !== vendor._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Not authorized to delete this product' });
-    }
-
     await product.deleteOne();
 
     return res.status(200).json({ success: true, message: 'Product deleted successfully!' });
   } catch (err) {
+    console.error('Delete Product Error:', err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };

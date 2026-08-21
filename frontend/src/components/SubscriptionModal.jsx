@@ -61,7 +61,7 @@ export default function SubscriptionModal({ isOpen, onClose, currentCommission, 
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 relative max-h-[95vh] overflow-y-auto font-['Plus_Jakarta_Sans',sans-serif]">
+      <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 relative max-h-[95vh] overflow-y-auto no-scrollbar font-['Plus_Jakarta_Sans',sans-serif]">
         <button onClick={onClose} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 p-1">
           <X size={20} />
         </button>

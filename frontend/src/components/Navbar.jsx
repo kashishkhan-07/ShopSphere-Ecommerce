@@ -109,37 +109,43 @@ export default function Navbar({
             </div>
           </button>
 
-          {/* Desktop Search Bar */}
-          <div className="flex-1 max-w-2xl hidden md:flex items-center bg-slate-100/90 rounded-2xl border border-slate-200 focus-within:border-[#063F35] focus-within:bg-white transition shadow-2xs overflow-hidden">
-            <select
-              value={selectedCategory || 'All'}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="bg-transparent text-xs font-bold text-slate-700 px-3 py-2.5 outline-none border-r border-slate-200 cursor-pointer"
-            >
-              <option value="All">All Categories</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Fashion">Fashion</option>
-              <option value="Beauty">Beauty</option>
-              <option value="Home & Kitchen">Home & Kitchen</option>
-            </select>
+          {/* Desktop Search Bar (Only for Buyers) */}
+          {!isAdmin && !isVendor && (
+            <div className="flex-1 max-w-2xl hidden md:flex items-center bg-slate-100/90 rounded-2xl border border-slate-200 focus-within:border-[#063F35] focus-within:bg-white transition shadow-2xs overflow-hidden">
+              <select
+                value={selectedCategory || 'All'}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="bg-transparent text-xs font-bold text-slate-700 px-3 py-2.5 outline-none border-r border-slate-200 cursor-pointer"
+              >
+                <option value="All">All Categories</option>
+                <option value="Electronics">Electronics 💻</option>
+                <option value="Fashion">Fashion 👕</option>
+                <option value="Beauty">Beauty 🧴</option>
+                <option value="Home & Kitchen">Home & Kitchen 🏠</option>
+                <option value="Sports">Sports ⚽</option>
+                <option value="Toys & Games">Toys & Games 🧸</option>
+                <option value="Books">Books 📚</option>
+                <option value="Accessories">Accessories 🕶️</option>
+              </select>
 
-            <div className="flex-1 flex items-center px-3">
-              <input
-                type="text"
-                placeholder="Search products, brands and stores..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (activeTab !== 'catalog') setActiveTab('catalog');
-                }}
-                className="w-full text-xs bg-transparent py-2.5 text-slate-900 focus:outline-none"
-              />
+              <div className="flex-1 flex items-center px-3">
+                <input
+                  type="text"
+                  placeholder="Search products, brands and stores..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (activeTab !== 'catalog') setActiveTab('catalog');
+                  }}
+                  className="w-full text-xs bg-transparent py-2.5 text-slate-900 focus:outline-none"
+                />
+              </div>
+
+              <button className="bg-[#063F35] text-white p-2.5 px-4 transition cursor-pointer flex items-center justify-center">
+                <Search size={16} />
+              </button>
             </div>
-
-            <button className="bg-[#063F35] text-white p-2.5 px-4 transition cursor-pointer flex items-center justify-center">
-              <Search size={16} />
-            </button>
-          </div>
+          )}
 
           {/* Right Desktop Links + ALWAYS VISIBLE PROFILE */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -266,36 +272,40 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* Mobile Search Input */}
-        <div className="px-4 pb-2.5 md:hidden">
-          <div className="flex items-center bg-slate-100 rounded-xl border border-slate-200 px-3 py-1.5">
-            <Search size={14} className="text-slate-400 shrink-0 mr-2" />
-            <input
-              type="text"
-              placeholder="Search products, brands & stores..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                if (activeTab !== 'catalog') setActiveTab('catalog');
-              }}
-              className="w-full text-xs bg-transparent focus:outline-none"
-            />
+        {/* Mobile Search Input (Only for Buyers) */}
+        {!isAdmin && !isVendor && (
+          <div className="px-4 pb-2.5 md:hidden">
+            <div className="flex items-center bg-slate-100 rounded-xl border border-slate-200 px-3 py-1.5">
+              <Search size={14} className="text-slate-400 shrink-0 mr-2" />
+              <input
+                type="text"
+                placeholder="Search products, brands & stores..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (activeTab !== 'catalog') setActiveTab('catalog');
+                }}
+                className="w-full text-xs bg-transparent focus:outline-none"
+              />
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Sticky Sub-Header Categories */}
-        <div className="bg-slate-50 border-t border-slate-200/80 px-4 py-2 overflow-x-auto no-scrollbar">
-          <div className="max-w-7xl mx-auto flex items-center gap-2 text-xs font-bold text-slate-700 whitespace-nowrap">
-            <button onClick={() => setSelectedCategory('All')} className={`flex items-center gap-1 px-3 py-1.5 rounded-xl cursor-pointer ${selectedCategory === 'All' ? 'bg-[#063F35] text-white' : 'bg-slate-900 text-white'}`}>
-              <Layers size={13} /> <span>All</span>
-            </button>
-            {CATEGORIES_NAV.map((cat) => (
-              <button key={cat.name} onClick={() => { setSelectedCategory(cat.name); if (activeTab !== 'catalog') setActiveTab('catalog'); }} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl cursor-pointer ${selectedCategory === cat.name ? 'bg-[#063F35] text-white' : 'hover:bg-slate-200/70 text-slate-700'}`}>
-                <span>{cat.icon}</span> <span>{cat.name}</span>
+        {/* Sticky Sub-Header Categories (Only visible on Customer Catalog) */}
+        {activeTab === 'catalog' && (
+          <div className="bg-slate-50 border-t border-slate-200/80 px-4 py-2 overflow-x-auto no-scrollbar">
+            <div className="max-w-7xl mx-auto flex items-center gap-2 text-xs font-bold text-slate-700 whitespace-nowrap">
+              <button onClick={() => setSelectedCategory('All')} className={`flex items-center gap-1 px-3 py-1.5 rounded-xl cursor-pointer ${selectedCategory === 'All' ? 'bg-[#063F35] text-white' : 'bg-slate-900 text-white'}`}>
+                <Layers size={13} /> <span>All</span>
               </button>
-            ))}
+              {CATEGORIES_NAV.map((cat) => (
+                <button key={cat.name} onClick={() => { setSelectedCategory(cat.name); if (activeTab !== 'catalog') setActiveTab('catalog'); }} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl cursor-pointer ${selectedCategory === cat.name ? 'bg-[#063F35] text-white' : 'hover:bg-slate-200/70 text-slate-700'}`}>
+                  <span>{cat.icon}</span> <span>{cat.name}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </header>
 
       {/* Slide-Out Mobile Drawer */}

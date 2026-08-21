@@ -2,12 +2,46 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 
 dotenv.config();
 connectDB();
 
 const app = express();
+const server = http.createServer(app);
+
+// ⚡ Socket.IO Real-Time Engine Setup
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
+
+app.set('io', io);
+
+io.on('connection', (socket) => {
+  console.log('⚡ Real-time Socket Connected:', socket.id);
+
+  socket.on('join_room', (chatId) => {
+    if (chatId) {
+      socket.join(String(chatId));
+      console.log(`Socket ${socket.id} joined room ${chatId}`);
+    }
+  });
+
+  socket.on('send_message', (data) => {
+    if (data && data.chatId) {
+      io.to(String(data.chatId)).emit('receive_message', data);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Socket disconnected:', socket.id);
+  });
+});
 
 app.use(cors());
 app.use(express.json());
@@ -32,6 +66,6 @@ app.use((req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 ShopSphere Server running on PORT ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 ShopSphere Express & Socket.IO Server running on PORT ${PORT}`);
 });
